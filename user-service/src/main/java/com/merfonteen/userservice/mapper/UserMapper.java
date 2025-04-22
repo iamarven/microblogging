@@ -1,11 +1,13 @@
 package com.merfonteen.userservice.mapper;
 
-import com.merfonteen.userservice.dto.UserResponseDto;
+import com.merfonteen.userservice.dto.PublicUserDto;
+import com.merfonteen.userservice.dto.PrivateUserDto;
 import com.merfonteen.userservice.model.User;
 import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring")
 public interface UserMapper {
-    UserResponseDto toDto(User user);
-    User toEntity(UserResponseDto userDto);
+    PrivateUserDto toPrivateDto(User user);
+    PublicUserDto toPublicDto(User user);
+    User toEntity(PrivateUserDto userDto);
 }
