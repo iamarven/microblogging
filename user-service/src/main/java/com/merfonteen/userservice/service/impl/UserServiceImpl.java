@@ -78,7 +78,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void deleteUser(Long id, Long currentUserId) {
+    public PublicUserDto deleteUser(Long id, Long currentUserId) {
         User user = findUserByIdOrThrowException(id);
 
         AuthUtil.requireSelfAccess(id, currentUserId);
@@ -87,6 +87,7 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
 
         log.info("User with id '{}' marked as deactivated", id);
+        return userMapper.toPublicDto(user);
     }
 
     private User findUserByIdOrThrowException(Long id) {
