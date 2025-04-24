@@ -1,17 +1,17 @@
 package com.merfonteen.postservice.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.Instant;
 
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @Entity
-@Table(name = "posts_table", schema = "post_service")
+@Table(name = "posts", schema = "post_service")
 public class Post {
 
     @Id

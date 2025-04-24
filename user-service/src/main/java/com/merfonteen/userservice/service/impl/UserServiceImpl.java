@@ -11,6 +11,7 @@ import com.merfonteen.userservice.model.User;
 import com.merfonteen.userservice.repository.UserRepository;
 import com.merfonteen.userservice.service.UserService;
 import com.merfonteen.userservice.util.AuthUtil;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
@@ -40,6 +41,7 @@ public class UserServiceImpl implements UserService {
         return userMapper.toPublicDto(user);
     }
 
+    @Transactional
     @Override
     public PublicUserDto createUser(UserCreateDto userCreateDto) {
         validEmailAndUsername(userCreateDto);
@@ -61,6 +63,7 @@ public class UserServiceImpl implements UserService {
         return userMapper.toPublicDto(user);
     }
 
+    @Transactional
     @Override
     public PublicUserDto updateUser(Long id, UserUpdateDto userUpdateDto, Long currentUserId) {
         User user = findUserByIdOrThrowException(id);
@@ -77,6 +80,7 @@ public class UserServiceImpl implements UserService {
         return userMapper.toPublicDto(user);
     }
 
+    @Transactional
     @Override
     public PublicUserDto deleteUser(Long id, Long currentUserId) {
         User user = findUserByIdOrThrowException(id);

@@ -23,18 +23,18 @@ public class User {
     @Column(nullable = false, unique = true, length = 100)
     private String email;
 
-    @Column(nullable = true)
+    @Column(name = "full_name", nullable = true)
     private String fullName;
 
     @Column(nullable = true)
     private String bio;
 
-    @Column(nullable = true)
+    @Column(name = "profile_image_url", nullable = true)
     private String profileImageUrl;
 
-    @Column(nullable = false)
+    @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
-    @Column(nullable = false)
+    @Column(name = "is_active", nullable = false)
     private Boolean isActive;
 }

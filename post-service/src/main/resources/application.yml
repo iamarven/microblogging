@@ -17,3 +17,6 @@ spring:
   flyway:
     schemas: post_service
     baseline-on-migrate: true
+
+user-service:
+  url: http://localhost:8080
