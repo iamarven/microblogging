@@ -11,6 +11,7 @@
 
   <modules>
     <module>user-service</module>
+    <module>post-service</module>
   </modules>
 
   <properties>
