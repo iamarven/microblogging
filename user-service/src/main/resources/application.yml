@@ -16,3 +16,4 @@ spring:
         default_schema: user_service
   flyway:
     schemas: user_service
+    baseline-on-migrate: true

@@ -3,9 +3,13 @@ package com.merfonteen.userservice.service.impl;
 import com.merfonteen.userservice.dto.PublicUserDto;
 import com.merfonteen.userservice.dto.UserCreateDto;
 import com.merfonteen.userservice.dto.UserUpdateDto;
+import com.merfonteen.userservice.exception.BadRequestException;
+import com.merfonteen.userservice.exception.ForbiddenException;
+import com.merfonteen.userservice.exception.NotFoundException;
 import com.merfonteen.userservice.mapper.UserMapper;
 import com.merfonteen.userservice.model.User;
 import com.merfonteen.userservice.repository.UserRepository;
+import org.checkerframework.checker.guieffect.qual.UIPackage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -53,6 +57,13 @@ class UserServiceImplTest {
     }
 
     @Test
+    void testGetUserById_WhenUserNotFound_ShouldThrowException() {
+        Long id = 1L;
+        when(userRepository.findById(id)).thenReturn(Optional.empty());
+        assertThrows(NotFoundException.class, () -> userService.getUserById(id));
+    }
+
+    @Test
     void testCreateUser_Success() {
         UserCreateDto userCreateDto = UserCreateDto.builder()
                 .username("testUsername")
@@ -90,6 +101,46 @@ class UserServiceImplTest {
     }
 
     @Test
+    void testCreateUser_WhenEmailAlreadyExists_ShouldThrowException() {
+        UserCreateDto dto = UserCreateDto.builder()
+                .username("testUsername")
+                .email("test@gmail.com")
+                .build();
+
+        User existingUser = User.builder()
+                .id(1L)
+                .username("testUsername")
+                .email("test@gmail.com")
+                .isActive(true)
+                .build();
+
+        when(userRepository.findByEmailAndIsActiveTrue(dto.getEmail())).thenReturn(Optional.ofNullable(existingUser));
+
+        Exception exception = assertThrows(BadRequestException.class, () -> userService.createUser(dto));
+        assertEquals(exception.getMessage(), "User with email 'test@gmail.com' already exists");
+    }
+
+    @Test
+    void testCreateUser_WhenUsernameAlreadyExists_ShouldThrowException() {
+        UserCreateDto dto = UserCreateDto.builder()
+                .username("testUsername")
+                .email("newEmail@gmail.com")
+                .build();
+
+        User existingUser = User.builder()
+                .id(1L)
+                .username("testUsername")
+                .email("test@gmail.com")
+                .isActive(true)
+                .build();
+
+        when(userRepository.findByUsernameAndIsActiveTrue(dto.getUsername())).thenReturn(Optional.ofNullable(existingUser));
+
+        Exception exception = assertThrows(BadRequestException.class, () -> userService.createUser(dto));
+        assertEquals(exception.getMessage(), "User with username 'testUsername' already exists");
+    }
+
+    @Test
     void testUpdateUser_Success() {
         Long id = 1L;
         Long currentUserId = 1L;
@@ -124,6 +175,30 @@ class UserServiceImplTest {
     }
 
     @Test
+    void testUpdateUser_WhenUserNotFound_ShouldThrowException() {
+        Long id = 1L;
+        when(userRepository.findById(id)).thenReturn(Optional.empty());
+        assertThrows(NotFoundException.class, () -> userService.updateUser(id, new UserUpdateDto(), 100L));
+    }
+
+    @Test
+    void testUpdateUser_WhenNotAllowed_ShouldThrowException() {
+        Long id = 1L;
+        UserUpdateDto dto = new UserUpdateDto();
+        Long currentId = 10L;
+
+        User user = User.builder()
+                .id(id)
+                .isActive(true)
+                .build();
+
+        when(userRepository.findById(id)).thenReturn(Optional.ofNullable(user));
+
+        Exception exception = assertThrows(ForbiddenException.class, () -> userService.updateUser(id, dto, currentId));
+        assertEquals(exception.getMessage(), "You are not allowed to modify this user");
+    }
+
+    @Test
     void testDeleteUser_Success() {
         Long id = 1L;
         Long currentId = 1L;
@@ -150,5 +225,28 @@ class UserServiceImplTest {
         PublicUserDto actual = userService.deleteUser(id, currentId);
 
         assertEquals(expectedDto.getId(), actual.getId());
+    }
+
+    @Test
+    void testDeleteUser_WhenUserNotFound_ShouldThrowException() {
+        Long id = 1L;
+        when(userRepository.findById(id)).thenReturn(Optional.empty());
+        assertThrows(NotFoundException.class, () -> userService.deleteUser(id, 100L));
+    }
+
+    @Test
+    void testDeleteUser_WhenNotAllowed_ShouldThrowException() {
+        Long id = 1L;
+        Long currentId = 10L;
+
+        User user = User.builder()
+                .id(id)
+                .isActive(true)
+                .build();
+
+        when(userRepository.findById(id)).thenReturn(Optional.ofNullable(user));
+
+        Exception exception = assertThrows(ForbiddenException.class, () -> userService.deleteUser(id, currentId));
+        assertEquals(exception.getMessage(), "You are not allowed to modify this user");
     }
 }
