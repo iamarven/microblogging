@@ -3,6 +3,7 @@ package com.merfonteen.postservice.service.impl;
 import com.merfonteen.postservice.client.UserClient;
 import com.merfonteen.postservice.dto.PostCreateDto;
 import com.merfonteen.postservice.dto.PostResponseDto;
+import com.merfonteen.postservice.dto.PostUpdateDto;
 import com.merfonteen.postservice.dto.UserPostsPageResponseDto;
 import com.merfonteen.postservice.entity.Post;
 import com.merfonteen.postservice.exception.NotFoundException;
@@ -10,6 +11,7 @@ import com.merfonteen.postservice.mapper.PostMapper;
 import com.merfonteen.postservice.repository.PostRepository;
 import com.merfonteen.postservice.service.PostService;
 import com.merfonteen.postservice.service.RateLimiterService;
+import com.merfonteen.postservice.util.AuthUtil;
 import feign.FeignException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 @Primary
 @RequiredArgsConstructor
@@ -43,18 +46,23 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-    public UserPostsPageResponseDto getUserPosts(Long userId, int page, int size) {
+    public UserPostsPageResponseDto getUserPosts(Long userId, int page, int size, String sortBy) {
         checkUserExistsByUserClient(userId);
 
         if(size > 100) {
             size = 100;
         }
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        if(!sortBy.equals("createdAt") && !sortBy.equals("updatedAt")) {
+            log.warn("Invalid sortBy value '{}', defaulting to 'createdAt'", sortBy);
+            sortBy = "createdAt";
+        }
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, sortBy));
         Page<Post> userPostsPage = postRepository.findAllByAuthorId(userId, pageable);
         List<PostResponseDto> userPostsDto = postMapper.toListDtos(userPostsPage.getContent());
 
-        log.info("Getting posts for user with id: '{}' with pagination: page={}, size={}", userId, page, size);
+        log.info("Getting posts for user '{}', page={}, size={}, sortBy={}", userId, page, size, sortBy);
 
         return UserPostsPageResponseDto.builder()
                 .posts(userPostsDto)
@@ -83,6 +91,32 @@ public class PostServiceImpl implements PostService {
         log.info("Post with id '{}' successfully created by user '{}'", post.getId(), currentUserId);
 
         return postMapper.toDto(post);
+    }
+
+    @Transactional
+    @Override
+    public PostResponseDto updatePost(Long id, PostUpdateDto updateDto, Long currentUserId) {
+        Post postToUpdate = findPostByIdOrThrowException(id);
+        AuthUtil.requireSelfAccess(postToUpdate.getAuthorId(), currentUserId);
+
+        Optional.ofNullable(updateDto.getContent()).ifPresent(postToUpdate::setContent);
+        Optional.ofNullable(updateDto.getMediaUrl()).ifPresent(postToUpdate::setMediaUrl);
+        postToUpdate.setUpdatedAt(Instant.now());
+
+        postRepository.save(postToUpdate);
+        log.info("Post with id '{}' successfully updated by user with id: '{}'", id, currentUserId);
+
+        return postMapper.toDto(postToUpdate);
+    }
+
+    @Transactional
+    @Override
+    public PostResponseDto deletePost(Long id, Long currentUserId) {
+        Post postToDelete = findPostByIdOrThrowException(id);
+        AuthUtil.requireSelfAccess(postToDelete.getAuthorId(), currentUserId);
+        postRepository.deleteById(postToDelete.getId());
+        log.info("Post with id '{}' successfully deleted by user '{}'", id, currentUserId);
+        return postMapper.toDto(postToDelete);
     }
 
     private void checkUserExistsByUserClient(Long userId) {

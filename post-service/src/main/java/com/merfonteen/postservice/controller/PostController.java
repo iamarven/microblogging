@@ -2,6 +2,7 @@ package com.merfonteen.postservice.controller;
 
 import com.merfonteen.postservice.dto.PostCreateDto;
 import com.merfonteen.postservice.dto.PostResponseDto;
+import com.merfonteen.postservice.dto.PostUpdateDto;
 import com.merfonteen.postservice.dto.UserPostsPageResponseDto;
 import com.merfonteen.postservice.service.PostService;
 import jakarta.validation.Valid;
@@ -29,8 +30,9 @@ public class PostController {
     @GetMapping("/users/{userId}")
     public ResponseEntity<UserPostsPageResponseDto> getUserPosts(@PathVariable("userId") Long userId,
                                                                  @RequestParam(defaultValue = "0") @Min(0) int page,
-                                                                 @RequestParam(defaultValue = "10")@Min(1) int size) {
-        return ResponseEntity.ok(postService.getUserPosts(userId, page, size));
+                                                                 @RequestParam(defaultValue = "10")@Min(1) int size,
+                                                                 @RequestParam(defaultValue = "createdAt") String sortBy) {
+        return ResponseEntity.ok(postService.getUserPosts(userId, page, size, sortBy));
     }
 
     @PostMapping
@@ -39,5 +41,18 @@ public class PostController {
         PostResponseDto createdPost = postService.createPost(currentUserId, createDto);
         URI location = URI.create("/api/posts/" + createdPost.getId());
         return ResponseEntity.created(location).body(createdPost);
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<PostResponseDto> updatePost(@PathVariable("id") Long id,
+                                                      @RequestBody @Valid PostUpdateDto updateDto,
+                                                      @RequestHeader(name = "X-User-Id") Long currentUserId) {
+        return ResponseEntity.ok(postService.updatePost(id, updateDto, currentUserId));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<PostResponseDto> deletePost(@PathVariable("id") Long id,
+                                                      @RequestHeader(name = "X-User-Id") Long currentUserId) {
+        return ResponseEntity.ok(postService.deletePost(id, currentUserId));
     }
 }

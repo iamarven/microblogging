@@ -14,14 +14,14 @@ public class RateLimiterService {
     private final StringRedisTemplate stringRedisTemplate;
 
     private static final int POST_LIMIT = 5;
-    private static final Duration WINDOW = Duration.ofMinutes(1);
+    private static final Duration DURATION = Duration.ofMinutes(1);
 
     public void validatePostCreationLimit(Long userId) {
         String key = "post_create:" + userId;
         Long currentCount = stringRedisTemplate.opsForValue().increment(key);
 
         if(currentCount == 1) {
-            stringRedisTemplate.expire(key, WINDOW);
+            stringRedisTemplate.expire(key, DURATION);
         }
 
         if(currentCount > POST_LIMIT) {

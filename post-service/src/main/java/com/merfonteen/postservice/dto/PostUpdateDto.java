@@ -1,6 +1,5 @@
 package com.merfonteen.postservice.dto;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,9 +10,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 @Data
-public class PostCreateDto {
+public class PostUpdateDto {
     @Size(max = 5000)
-    @NotBlank(message = "Content is required")
     private String content;
     private String mediaUrl;
 }
