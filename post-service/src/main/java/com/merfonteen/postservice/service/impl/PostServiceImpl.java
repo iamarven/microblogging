@@ -9,6 +9,7 @@ import com.merfonteen.postservice.exception.NotFoundException;
 import com.merfonteen.postservice.mapper.PostMapper;
 import com.merfonteen.postservice.repository.PostRepository;
 import com.merfonteen.postservice.service.PostService;
+import com.merfonteen.postservice.service.RateLimiterService;
 import feign.FeignException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,7 @@ public class PostServiceImpl implements PostService {
     private final PostMapper postMapper;
     private final PostRepository postRepository;
     private final UserClient userClient;
+    private final RateLimiterService rateLimiterService;
 
     @Override
     public PostResponseDto getPostById(Long id) {
@@ -67,6 +69,8 @@ public class PostServiceImpl implements PostService {
     @Override
     public PostResponseDto createPost(Long currentUserId, PostCreateDto createDto) {
         checkUserExistsByUserClient(currentUserId);
+
+        rateLimiterService.validatePostCreationLimit(currentUserId);
 
         Post post = Post.builder()
                 .authorId(currentUserId)
