@@ -3,6 +3,7 @@ package com.merfonteen.postservice.service.impl;
 import com.merfonteen.postservice.client.UserClient;
 import com.merfonteen.postservice.dto.PostCreateDto;
 import com.merfonteen.postservice.dto.PostResponseDto;
+import com.merfonteen.postservice.dto.UserPostsPageResponseDto;
 import com.merfonteen.postservice.entity.Post;
 import com.merfonteen.postservice.exception.NotFoundException;
 import com.merfonteen.postservice.mapper.PostMapper;
@@ -13,9 +14,14 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.List;
 
 @Primary
 @RequiredArgsConstructor
@@ -34,15 +40,33 @@ public class PostServiceImpl implements PostService {
         return postMapper.toDto(post);
     }
 
+    @Override
+    public UserPostsPageResponseDto getUserPosts(Long userId, int page, int size) {
+        checkUserExistsByUserClient(userId);
+
+        if(size > 100) {
+            size = 100;
+        }
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Post> userPostsPage = postRepository.findAllByAuthorId(userId, pageable);
+        List<PostResponseDto> userPostsDto = postMapper.toListDtos(userPostsPage.getContent());
+
+        log.info("Getting posts for user with id: '{}' with pagination: page={}, size={}", userId, page, size);
+
+        return UserPostsPageResponseDto.builder()
+                .posts(userPostsDto)
+                .currentPage(userPostsPage.getNumber())
+                .totalPages(userPostsPage.getTotalPages())
+                .totalElements(userPostsPage.getTotalElements())
+                .isLastPage(userPostsPage.isLast())
+                .build();
+    }
+
     @Transactional
     @Override
     public PostResponseDto createPost(Long currentUserId, PostCreateDto createDto) {
-        try {
-            userClient.checkUserExists(currentUserId);
-        } catch (FeignException.NotFound e) {
-            log.error("During creation post user with id '{}' was not found", currentUserId);
-            throw new NotFoundException(String.format("User with id '%d' not found", currentUserId));
-        }
+        checkUserExistsByUserClient(currentUserId);
 
         Post post = Post.builder()
                 .authorId(currentUserId)
@@ -55,6 +79,15 @@ public class PostServiceImpl implements PostService {
         log.info("Post with id '{}' successfully created by user '{}'", post.getId(), currentUserId);
 
         return postMapper.toDto(post);
+    }
+
+    private void checkUserExistsByUserClient(Long userId) {
+        try {
+            userClient.checkUserExists(userId);
+        } catch (FeignException.NotFound e) {
+            log.error("User with id '{}' not found", userId);
+            throw new NotFoundException(String.format("User with id '%d' not found", userId));
+        }
     }
 
     private Post findPostByIdOrThrowException(Long id) {

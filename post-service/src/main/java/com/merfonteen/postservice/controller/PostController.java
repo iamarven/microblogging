@@ -2,8 +2,10 @@ package com.merfonteen.postservice.controller;
 
 import com.merfonteen.postservice.dto.PostCreateDto;
 import com.merfonteen.postservice.dto.PostResponseDto;
+import com.merfonteen.postservice.dto.UserPostsPageResponseDto;
 import com.merfonteen.postservice.service.PostService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +24,13 @@ public class PostController {
     @GetMapping("/{id}")
     public ResponseEntity<PostResponseDto> getPostById(@PathVariable("id") Long id) {
         return ResponseEntity.ok(postService.getPostById(id));
+    }
+
+    @GetMapping("/users/{userId}")
+    public ResponseEntity<UserPostsPageResponseDto> getUserPosts(@PathVariable("userId") Long userId,
+                                                                 @RequestParam(defaultValue = "0") @Min(0) int page,
+                                                                 @RequestParam(defaultValue = "10")@Min(1) int size) {
+        return ResponseEntity.ok(postService.getUserPosts(userId, page, size));
     }
 
     @PostMapping
