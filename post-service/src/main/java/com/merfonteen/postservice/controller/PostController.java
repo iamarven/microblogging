@@ -4,6 +4,7 @@ import com.merfonteen.postservice.dto.PostCreateDto;
 import com.merfonteen.postservice.dto.PostResponseDto;
 import com.merfonteen.postservice.dto.PostUpdateDto;
 import com.merfonteen.postservice.dto.UserPostsPageResponseDto;
+import com.merfonteen.postservice.model.enums.PostSortField;
 import com.merfonteen.postservice.service.PostService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
@@ -32,7 +33,8 @@ public class PostController {
                                                                  @RequestParam(defaultValue = "0") @Min(0) int page,
                                                                  @RequestParam(defaultValue = "10")@Min(1) int size,
                                                                  @RequestParam(defaultValue = "createdAt") String sortBy) {
-        return ResponseEntity.ok(postService.getUserPosts(userId, page, size, sortBy));
+        PostSortField postSortField = PostSortField.from(sortBy);
+        return ResponseEntity.ok(postService.getUserPosts(userId, page, size, postSortField));
     }
 
     @PostMapping

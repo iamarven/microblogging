@@ -1,7 +1,7 @@
 package com.merfonteen.postservice.mapper;
 
 import com.merfonteen.postservice.dto.PostResponseDto;
-import com.merfonteen.postservice.entity.Post;
+import com.merfonteen.postservice.model.Post;
 import org.mapstruct.Mapper;
 
 import java.util.List;

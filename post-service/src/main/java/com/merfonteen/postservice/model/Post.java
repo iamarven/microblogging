@@ -1,4 +1,4 @@
-package com.merfonteen.postservice.entity;
+package com.merfonteen.postservice.model;
 
 import jakarta.persistence.*;
 import lombok.*;

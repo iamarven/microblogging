@@ -5,10 +5,12 @@ import com.merfonteen.postservice.dto.PostCreateDto;
 import com.merfonteen.postservice.dto.PostResponseDto;
 import com.merfonteen.postservice.dto.PostUpdateDto;
 import com.merfonteen.postservice.dto.UserPostsPageResponseDto;
-import com.merfonteen.postservice.entity.Post;
 import com.merfonteen.postservice.exception.NotFoundException;
 import com.merfonteen.postservice.mapper.PostMapper;
+import com.merfonteen.postservice.model.Post;
+import com.merfonteen.postservice.model.enums.PostSortField;
 import com.merfonteen.postservice.repository.PostRepository;
+import com.merfonteen.postservice.service.PostCacheService;
 import com.merfonteen.postservice.service.PostService;
 import com.merfonteen.postservice.service.RateLimiterService;
 import com.merfonteen.postservice.util.AuthUtil;
@@ -16,6 +18,8 @@ import feign.FeignException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -37,7 +41,9 @@ public class PostServiceImpl implements PostService {
     private final PostRepository postRepository;
     private final UserClient userClient;
     private final RateLimiterService rateLimiterService;
+    private final PostCacheService postCacheService;
 
+    @Cacheable(value = "post-by-id", key = "#id")
     @Override
     public PostResponseDto getPostById(Long id) {
         Post post = findPostByIdOrThrowException(id);
@@ -45,24 +51,20 @@ public class PostServiceImpl implements PostService {
         return postMapper.toDto(post);
     }
 
+    @Cacheable(value = "user-posts", key = "#userId + ':' + #page + ':' + #size")
     @Override
-    public UserPostsPageResponseDto getUserPosts(Long userId, int page, int size, String sortBy) {
+    public UserPostsPageResponseDto getUserPosts(Long userId, int page, int size, PostSortField sortField) {
         checkUserExistsByUserClient(userId);
 
         if(size > 100) {
             size = 100;
         }
 
-        if(!sortBy.equals("createdAt") && !sortBy.equals("updatedAt")) {
-            log.warn("Invalid sortBy value '{}', defaulting to 'createdAt'", sortBy);
-            sortBy = "createdAt";
-        }
-
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, sortBy));
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, sortField.getFieldName()));
         Page<Post> userPostsPage = postRepository.findAllByAuthorId(userId, pageable);
         List<PostResponseDto> userPostsDto = postMapper.toListDtos(userPostsPage.getContent());
 
-        log.info("Getting posts for user '{}', page={}, size={}, sortBy={}", userId, page, size, sortBy);
+        log.info("Getting posts for user '{}', page={}, size={}, sortBy={}", userId, page, size, sortField.getFieldName());
 
         return UserPostsPageResponseDto.builder()
                 .posts(userPostsDto)
@@ -90,9 +92,11 @@ public class PostServiceImpl implements PostService {
         postRepository.save(post);
         log.info("Post with id '{}' successfully created by user '{}'", post.getId(), currentUserId);
 
+        postCacheService.evictUserPostsCache(currentUserId);
         return postMapper.toDto(post);
     }
 
+    @CacheEvict(value = "post-by-id", key = "#id")
     @Transactional
     @Override
     public PostResponseDto updatePost(Long id, PostUpdateDto updateDto, Long currentUserId) {
@@ -106,16 +110,21 @@ public class PostServiceImpl implements PostService {
         postRepository.save(postToUpdate);
         log.info("Post with id '{}' successfully updated by user with id: '{}'", id, currentUserId);
 
+        postCacheService.evictUserPostsCache(currentUserId);
         return postMapper.toDto(postToUpdate);
     }
 
+    @CacheEvict(value = "post-by-id", key = "#id")
     @Transactional
     @Override
     public PostResponseDto deletePost(Long id, Long currentUserId) {
         Post postToDelete = findPostByIdOrThrowException(id);
         AuthUtil.requireSelfAccess(postToDelete.getAuthorId(), currentUserId);
+
         postRepository.deleteById(postToDelete.getId());
         log.info("Post with id '{}' successfully deleted by user '{}'", id, currentUserId);
+
+        postCacheService.evictUserPostsCache(currentUserId);
         return postMapper.toDto(postToDelete);
     }
 
