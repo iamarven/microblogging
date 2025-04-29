@@ -9,7 +9,6 @@ import com.merfonteen.userservice.exception.NotFoundException;
 import com.merfonteen.userservice.mapper.UserMapper;
 import com.merfonteen.userservice.model.User;
 import com.merfonteen.userservice.repository.UserRepository;
-import org.checkerframework.checker.guieffect.qual.UIPackage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -18,8 +17,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceImplTest {
