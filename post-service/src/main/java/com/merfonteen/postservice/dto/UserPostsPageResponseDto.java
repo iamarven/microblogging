@@ -5,13 +5,14 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
 import java.util.List;
 
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
 @Data
-public class UserPostsPageResponseDto {
+public class UserPostsPageResponseDto implements Serializable {
     private List<PostResponseDto> posts;
     private int currentPage;
     private int totalPages;

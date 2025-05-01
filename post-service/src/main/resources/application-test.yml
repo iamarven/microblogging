@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    url: jdbc:tc:postgresql:15-alpine:///test-db
+    username: test
+    password: test
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_schema: post_service
+  flyway:
+    enabled: true
+    schemas: post_service
+    baseline-on-migrate: true
+
+  data:
+    redis:
+      host: localhost
+      port: 6379

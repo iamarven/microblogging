@@ -6,13 +6,14 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
 import java.time.Instant;
 
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
 @Data
-public class PostResponseDto {
+public class PostResponseDto implements Serializable {
     private Long id;
     @JsonProperty("author_id")
     private Long authorId;

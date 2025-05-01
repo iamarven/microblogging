@@ -14,8 +14,8 @@ public class PostCacheService {
 
     private final RedisTemplate<String, Object> redisTemplate;
 
-    public void evictUserPostsCache(Long userId) {
-        String pattern = "user-posts:" + userId + ":*";
+    public void evictUserPostsCacheByUserId(Long userId) {
+        String pattern = "user-posts::" + userId + ":*";
         Set<String> keys = redisTemplate.keys(pattern);
         if(keys != null && !keys.isEmpty()) {
             redisTemplate.delete(keys);

@@ -43,7 +43,7 @@ public class PostServiceImpl implements PostService {
     private final RateLimiterService rateLimiterService;
     private final PostCacheService postCacheService;
 
-    @Cacheable(value = "post-by-id", key = "#id")
+    @Cacheable(value = "post-by-id", key = "#id", unless = "#result == null")
     @Override
     public PostResponseDto getPostById(Long id) {
         Post post = findPostByIdOrThrowException(id);
@@ -92,7 +92,7 @@ public class PostServiceImpl implements PostService {
         postRepository.save(post);
         log.info("Post with id '{}' successfully created by user '{}'", post.getId(), currentUserId);
 
-        postCacheService.evictUserPostsCache(currentUserId);
+        postCacheService.evictUserPostsCacheByUserId(currentUserId);
         return postMapper.toDto(post);
     }
 
@@ -110,7 +110,7 @@ public class PostServiceImpl implements PostService {
         postRepository.save(postToUpdate);
         log.info("Post with id '{}' successfully updated by user with id: '{}'", id, currentUserId);
 
-        postCacheService.evictUserPostsCache(currentUserId);
+        postCacheService.evictUserPostsCacheByUserId(currentUserId);
         return postMapper.toDto(postToUpdate);
     }
 
@@ -124,7 +124,7 @@ public class PostServiceImpl implements PostService {
         postRepository.deleteById(postToDelete.getId());
         log.info("Post with id '{}' successfully deleted by user '{}'", id, currentUserId);
 
-        postCacheService.evictUserPostsCache(currentUserId);
+        postCacheService.evictUserPostsCacheByUserId(currentUserId);
         return postMapper.toDto(postToDelete);
     }
 

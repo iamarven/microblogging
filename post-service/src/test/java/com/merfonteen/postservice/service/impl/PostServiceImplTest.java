@@ -170,7 +170,7 @@ class PostServiceImplTest {
 
         verify(userClient).checkUserExists(currentUserId);
         verify(rateLimiterService).validatePostCreationLimit(currentUserId);
-        verify(postCacheService).evictUserPostsCache(currentUserId);
+        verify(postCacheService).evictUserPostsCacheByUserId(currentUserId);
     }
 
     @Test
@@ -243,7 +243,7 @@ class PostServiceImplTest {
         assertEquals(postDto.getId(), result.getId());
         assertEquals(postDto.getContent(), result.getContent());
 
-        verify(postCacheService).evictUserPostsCache(currentUserId);
+        verify(postCacheService).evictUserPostsCacheByUserId(currentUserId);
     }
 
     @Test
@@ -309,7 +309,7 @@ class PostServiceImplTest {
         assertEquals(postDto.getId(), result.getId());
         assertEquals(postDto.getContent(), result.getContent());
 
-        verify(postCacheService).evictUserPostsCache(currentUserId);
+        verify(postCacheService).evictUserPostsCacheByUserId(currentUserId);
     }
 
     @Test
