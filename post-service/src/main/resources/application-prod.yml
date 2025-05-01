@@ -1,29 +1,35 @@
-server:
-  port: 8081
-
 spring:
-  profiles:
-    active: prod
   datasource:
-    url: jdbc:postgresql://localhost:5432/microservices-db
+    url: jdbc:postgresql://postgres:5432/post_service_db
     username: postgres
-    password: 1234
+    password: postgres
     driver-class-name: org.postgresql.Driver
+
   jpa:
     hibernate:
-      ddl-auto: none
+      ddl-auto: validate
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         default_schema: post_service
+
   flyway:
+    enabled: true
     schemas: post_service
-    baseline-on-migrate: true
+    baseline-on-migrate: false
+
   data:
     redis:
-      host: localhost
+      host: redis
       port: 6379
 
+  cache:
+    type: redis
 
-user-service:
-  url: http://localhost:8080
+logging:
+  level:
+    root: INFO
+    com.merfonteen: INFO
+
+server:
+  port: 8080
