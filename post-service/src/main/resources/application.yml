@@ -4,11 +4,13 @@ server:
 spring:
   profiles:
     active: prod
+
   datasource:
     url: jdbc:postgresql://localhost:5432/microservices-db
     username: postgres
-    password: 1234
+    password: postgres
     driver-class-name: org.postgresql.Driver
+
   jpa:
     hibernate:
       ddl-auto: none
@@ -16,14 +18,15 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         default_schema: post_service
+
   flyway:
     schemas: post_service
     baseline-on-migrate: true
+
   data:
     redis:
       host: localhost
       port: 6379
-
 
 user-service:
   url: http://localhost:8080
