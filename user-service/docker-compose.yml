@@ -1,20 +1,30 @@
 services:
-  postgres:
-    image: postgres:16
-    container_name: postgres_user_service
-    environment:
-      POSTGRES_DB: ${DOCKER_DATABASE_DB}
-      POSTGRES_USER: ${DOCKER_DATABASE_USERNAME}
-      POSTGRES_PASSWORD: ${DOCKER_DATABASE_PASSWORD}
+
+  user-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
-      - "5432:5432"
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://user-service-db:5432/user_service_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+    depends_on:
+      - user-service-db
+
+  user-service-db:
+    image: postgres:15-alpine
+    container_name: user-service-db
+    environment:
+      POSTGRES_DB: user_service_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - backend
+      - user-service-data:/var/lib/postgresql/data
 
 volumes:
-  postgres_data:
-
-networks:
-  backend:
+  user-service-data:
