@@ -1,10 +1,7 @@
 package com.merfonteen.feedservice.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.Instant;
 
@@ -12,13 +9,13 @@ import java.time.Instant;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 @Entity
 @Table(name = "subscriptions",
         schema = "feed_service",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"follower_id", "followed_id"})
+        uniqueConstraints = @UniqueConstraint(columnNames = {"follower_id", "followee_id"})
 )
 public class Subscription {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
