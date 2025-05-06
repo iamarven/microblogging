@@ -32,6 +32,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     @Override
     public List<SubscriptionDto> getMySubscriptions(Long currentUserId) {
         List<Subscription> subscriptions = subscriptionRepository.findAllByFollowerId(currentUserId);
+        log.info("Getting all subscriptions for user with id: {}", currentUserId);
         return subscriptions.stream()
                 .map(subscriptionMapper::toDto)
                 .toList();
