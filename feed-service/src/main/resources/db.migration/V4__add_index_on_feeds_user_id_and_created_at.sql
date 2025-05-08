@@ -1,0 +1,1 @@
+CREATE INDEX idx_feeds_user_id_and_created_at ON feed_service.feeds(user_id, created_at DESC);

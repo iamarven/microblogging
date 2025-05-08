@@ -1,6 +1,7 @@
 package com.merfonteen.feedservice.service.impl;
 
 import com.merfonteen.feedservice.dto.FeedDto;
+import com.merfonteen.feedservice.dto.FeedPageResponseDto;
 import com.merfonteen.feedservice.dto.PostCreatedEvent;
 import com.merfonteen.feedservice.mapper.FeedMapper;
 import com.merfonteen.feedservice.model.Feed;
@@ -13,6 +14,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -29,11 +33,22 @@ public class FeedServiceImpl implements FeedService {
     private final SubscriptionRepository subscriptionRepository;
 
     @Override
-    public List<FeedDto> getMyFeed(Long currentUserId) {
-        List<Feed> feedForUser = feedRepository.findAllByUserId(currentUserId);
-        return feedForUser.stream()
-                .map(feedMapper::toDto)
-                .toList();
+    public FeedPageResponseDto getMyFeed(Long currentUserId, int page, int size) {
+        if(size > 100) {
+            size = 100;
+        }
+
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "created_at"));
+        Page<Feed> feedsPage = feedRepository.findAllByUserId(currentUserId, pageRequest);
+        List<FeedDto> feedsForUser = feedMapper.toListDtos(feedsPage.getContent());
+
+        return FeedPageResponseDto.builder()
+                .feeds(feedsForUser)
+                .currentPage(feedsPage.getNumber())
+                .totalElements(feedsPage.getTotalElements())
+                .totalPages(feedsPage.getTotalPages())
+                .isLastPage(feedsPage.isLast())
+                .build();
     }
 
     @Transactional

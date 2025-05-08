@@ -1,6 +1,7 @@
 package com.merfonteen.feedservice.controller;
 
 import com.merfonteen.feedservice.dto.FeedDto;
+import com.merfonteen.feedservice.dto.FeedPageResponseDto;
 import com.merfonteen.feedservice.dto.SubscriptionDto;
 import com.merfonteen.feedservice.service.FeedService;
 import com.merfonteen.feedservice.service.SubscriptionService;
@@ -20,8 +21,10 @@ public class FeedController {
     private final SubscriptionService subscriptionService;
 
     @GetMapping
-    public ResponseEntity<List<FeedDto>> getMyFeed(@RequestHeader("X-User-Id") Long currentUserId) {
-        return ResponseEntity.ok(feedService.getMyFeed(currentUserId));
+    public ResponseEntity<FeedPageResponseDto> getMyFeed(@RequestHeader("X-User-Id") Long currentUserId,
+                                                         @RequestParam(required = false, defaultValue = "0") int page,
+                                                         @RequestParam(required = false, defaultValue = "10") int size) {
+        return ResponseEntity.ok(feedService.getMyFeed(currentUserId, page, size));
     }
 
     @GetMapping("/subscriptions")
