@@ -40,18 +40,17 @@ public class KafkaConfig {
 
     @Bean
     public ConsumerFactory<String, PostCreatedEvent> consumerFactory() {
+        JsonDeserializer<PostCreatedEvent> deserializer = new JsonDeserializer<>(PostCreatedEvent.class, false);
+        deserializer.addTrustedPackages("*");
+
         Map<String, Object> config = new HashMap<>();
         config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         config.put(ConsumerConfig.GROUP_ID_CONFIG, "feed-group");
         config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-        config.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
-        config.put(JsonDeserializer.VALUE_DEFAULT_TYPE, "com.merfonteen.feedservice.dto.PostCreatedEvent");
-
-        JsonDeserializer<PostCreatedEvent> deserializer = new JsonDeserializer<>();
-        deserializer.addTrustedPackages("*");
 
         return new DefaultKafkaConsumerFactory<>(config, new StringDeserializer(), deserializer);
     }
+
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, PostCreatedEvent> kafkaListenerContainerFactory() {

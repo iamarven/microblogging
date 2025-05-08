@@ -8,10 +8,12 @@ import com.merfonteen.feedservice.model.Feed;
 import com.merfonteen.feedservice.model.Subscription;
 import com.merfonteen.feedservice.repository.FeedRepository;
 import com.merfonteen.feedservice.repository.SubscriptionRepository;
+import com.merfonteen.feedservice.service.FeedCacheService;
 import com.merfonteen.feedservice.service.FeedService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Primary;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -20,7 +22,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -30,8 +34,10 @@ public class FeedServiceImpl implements FeedService {
 
     private final FeedMapper feedMapper;
     private final FeedRepository feedRepository;
+    private final FeedCacheService feedCacheService;
     private final SubscriptionRepository subscriptionRepository;
 
+    @Cacheable(value = "feed", key = "#currentUserId + ':' + #page + ':' + #size")
     @Override
     public FeedPageResponseDto getMyFeed(Long currentUserId, int page, int size) {
         if(size > 100) {
@@ -56,6 +62,7 @@ public class FeedServiceImpl implements FeedService {
     public void distributePostToSubscribers(PostCreatedEvent event) {
         List<Subscription> subscriptions = subscriptionRepository.findAllByFolloweeId(event.getAuthorId());
         List<Feed> buffer = new ArrayList<>();
+        Set<Long> userIdsToEvictCache = new HashSet<>();
 
         for(Subscription subscription : subscriptions) {
             buffer.add(Feed.builder()
@@ -64,10 +71,16 @@ public class FeedServiceImpl implements FeedService {
                     .createdAt(event.getCreatedAt())
                     .build());
 
+            userIdsToEvictCache.add(subscription.getFollowerId());
+
             if(buffer.size() == 50) {
                 safeSaveFeeds(buffer);
                 buffer.clear();
             }
+        }
+
+        if(!userIdsToEvictCache.isEmpty()) {
+            feedCacheService.evictFeedCache(userIdsToEvictCache);
         }
 
         if(!buffer.isEmpty()) {

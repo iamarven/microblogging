@@ -1,22 +1,20 @@
 spring:
-  profiles:
-    active: prod
   datasource:
-    url: jdbc:postgresql://postgres:5435/post_service_db
+    url: jdbc:postgresql://postgres:5432/feed_service_db
     username: postgres
     password: postgres
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        default_schema: post_service
+        default_schema: feed_service
   flyway:
     enabled: true
-    schemas: post_service
-    baseline-on-migrate: false
+    schemas: feed_service
+    baseline-on-migrate: true
   data:
     redis:
       host: redis
@@ -24,10 +22,7 @@ spring:
   cache:
     type: redis
   kafka:
-    bootstrap-servers: kafka:9094
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    bootstrap-servers: kafka:9092
     properties:
       spring.json.add.type.headers: false
       spring.json.trusted.packages: "*"

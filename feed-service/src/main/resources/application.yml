@@ -2,11 +2,16 @@ server:
   port: 8082
 
 spring:
+
+  profiles:
+    active: prod
+
   datasource:
     url: jdbc:postgresql://localhost:5432/microservices-db
     username: postgres
     password: 1234
     driver-class-name: org.postgresql.Driver
+
   jpa:
     hibernate:
       ddl-auto: none
@@ -18,16 +23,12 @@ spring:
           batch_size: 50
         order_updates: true
         order_inserts: true
+
   flyway:
     schemas: feed_service
     baseline-on-migrate: true
+
   kafka:
-    bootstrap-servers: localhost:9092
-    consumer:
-      group-id: feed-group
-      auto-offset-reset: earliest
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserialize
-      properties:
-        spring.json.trusted.packages: "*"
+    bootstrap-servers: kafka:9092
     listener:
       missing-topics-fatal: false

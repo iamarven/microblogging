@@ -13,7 +13,7 @@ spring:
         default_schema: feed_service
   flyway:
     enabled: true
-    schemas: feed_service
+    schemas: post_service
     baseline-on-migrate: false
   data:
     redis:

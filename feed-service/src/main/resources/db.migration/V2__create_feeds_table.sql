@@ -1,3 +1,5 @@
+CREATE SCHEMA IF NOT EXISTS feed_service;
+
 CREATE TABLE feed_service.feeds (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL,
