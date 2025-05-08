@@ -4,7 +4,6 @@ spring:
     username: postgres
     password: postgres
     driver-class-name: org.postgresql.Driver
-
   jpa:
     hibernate:
       ddl-auto: validate
@@ -12,24 +11,24 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         default_schema: post_service
-
   flyway:
     enabled: true
     schemas: post_service
     baseline-on-migrate: false
-
   data:
     redis:
       host: redis
       port: 6379
-
   cache:
     type: redis
-
-logging:
-  level:
-    root: INFO
-    com.merfonteen: INFO
+  kafka:
+    bootstrap-servers: kafka:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    properties:
+      spring.json.add.type.headers: false
+      spring.json.trusted.packages: "*"
 
 server:
   port: 8080

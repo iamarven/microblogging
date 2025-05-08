@@ -1,11 +1,9 @@
 package com.merfonteen.postservice.service.impl;
 
 import com.merfonteen.postservice.client.UserClient;
-import com.merfonteen.postservice.dto.PostCreateDto;
-import com.merfonteen.postservice.dto.PostResponseDto;
-import com.merfonteen.postservice.dto.PostUpdateDto;
-import com.merfonteen.postservice.dto.UserPostsPageResponseDto;
+import com.merfonteen.postservice.dto.*;
 import com.merfonteen.postservice.exception.NotFoundException;
+import com.merfonteen.postservice.kafkaProducer.PostEventProducer;
 import com.merfonteen.postservice.mapper.PostMapper;
 import com.merfonteen.postservice.model.Post;
 import com.merfonteen.postservice.model.enums.PostSortField;
@@ -42,6 +40,7 @@ public class PostServiceImpl implements PostService {
     private final UserClient userClient;
     private final RateLimiterService rateLimiterService;
     private final PostCacheService postCacheService;
+    private final PostEventProducer postEventProducer;
 
     @Cacheable(value = "post-by-id", key = "#id", unless = "#result == null")
     @Override
@@ -56,7 +55,7 @@ public class PostServiceImpl implements PostService {
     public UserPostsPageResponseDto getUserPosts(Long userId, int page, int size, PostSortField sortField) {
         checkUserExistsByUserClient(userId);
 
-        if(size > 100) {
+        if (size > 100) {
             size = 100;
         }
 
@@ -92,7 +91,9 @@ public class PostServiceImpl implements PostService {
         postRepository.save(post);
         log.info("Post with id '{}' successfully created by user '{}'", post.getId(), currentUserId);
 
+        postEventProducer.sendPostCreatedEvent(new PostCreatedEvent(post.getId(), currentUserId, Instant.now()));
         postCacheService.evictUserPostsCacheByUserId(currentUserId);
+
         return postMapper.toDto(post);
     }
 
