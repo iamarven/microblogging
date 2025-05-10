@@ -38,4 +38,4 @@ spring:
       spring.json.trusted.packages: "*"
 
 user-service:
-  url: http://localhost:8080
+  url: http://user-service:8080

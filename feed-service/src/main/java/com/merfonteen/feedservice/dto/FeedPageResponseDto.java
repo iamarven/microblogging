@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
 import java.time.Instant;
 import java.util.List;
 
@@ -13,7 +14,7 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class FeedPageResponseDto {
+public class FeedPageResponseDto implements Serializable {
     private List<FeedDto> feeds;
     @JsonProperty("current_page")
     private Integer currentPage;

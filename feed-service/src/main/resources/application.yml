@@ -2,7 +2,6 @@ server:
   port: 8082
 
 spring:
-
   profiles:
     active: prod
 
@@ -25,6 +24,7 @@ spring:
         order_inserts: true
 
   flyway:
+    enabled: true
     schemas: feed_service
     baseline-on-migrate: true
 
@@ -32,3 +32,6 @@ spring:
     bootstrap-servers: kafka:9092
     listener:
       missing-topics-fatal: false
+
+user-service:
+ url: http://user-service:8080

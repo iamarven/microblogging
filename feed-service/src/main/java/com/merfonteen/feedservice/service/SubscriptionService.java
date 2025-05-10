@@ -6,6 +6,7 @@ import java.util.List;
 
 public interface SubscriptionService {
     List<SubscriptionDto> getMySubscriptions(Long currentUserId);
+    List<SubscriptionDto> getMySubscribers(Long currentUserId);
     SubscriptionDto follow(Long targetUserId, Long currentUserId);
     SubscriptionDto unfollow(Long targetUserId, Long currentUserId);
 }

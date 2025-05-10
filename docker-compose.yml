@@ -47,7 +47,7 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
       - post-db
-      - post-redis
+      - redis
       - kafka
     networks:
       - app-net
@@ -66,9 +66,9 @@ services:
     networks:
       - app-net
 
-  post-redis:
+  redis:
     image: redis:7.2.4
-    container_name: post-redis
+    container_name: redis
     ports:
       - "6380:6379"
     networks:
@@ -90,6 +90,7 @@ services:
     depends_on:
       - feed-db
       - kafka
+      - redis
     networks:
       - app-net
 

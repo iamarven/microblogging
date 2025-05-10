@@ -44,7 +44,7 @@ public class FeedServiceImpl implements FeedService {
             size = 100;
         }
 
-        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "created_at"));
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Feed> feedsPage = feedRepository.findAllByUserId(currentUserId, pageRequest);
         List<FeedDto> feedsForUser = feedMapper.toListDtos(feedsPage.getContent());
 

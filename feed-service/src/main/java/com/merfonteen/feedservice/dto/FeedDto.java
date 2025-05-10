@@ -6,13 +6,14 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
 import java.time.Instant;
 
 @Builder
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class FeedDto {
+public class FeedDto implements Serializable {
     private Long id;
     @JsonProperty("user_id")
     private Long userId;

@@ -38,6 +38,15 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 .toList();
     }
 
+    @Override
+    public List<SubscriptionDto> getMySubscribers(Long currentUserId) {
+        List<Subscription> subscribers = subscriptionRepository.findAllByFolloweeId(currentUserId);
+        log.info("Getting all subscribers for user with id: {}", currentUserId);
+        return subscribers.stream()
+                .map(subscriptionMapper::toDto)
+                .toList();
+    }
+
     @Transactional
     @Override
     public SubscriptionDto follow(Long targetUserId, Long currentUserId) {

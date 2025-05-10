@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://postgres:5432/feed_service_db
+    url: jdbc:postgresql://feed-db:5432/feed_service_db
     username: postgres
     password: postgres
     driver-class-name: org.postgresql.Driver
@@ -15,6 +15,7 @@ spring:
     enabled: true
     schemas: feed_service
     baseline-on-migrate: true
+    locations: classpath:db/migration
   data:
     redis:
       host: redis
