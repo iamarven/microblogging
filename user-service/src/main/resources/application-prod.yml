@@ -1,4 +1,6 @@
 spring:
+  application:
+    name: user-service
   datasource:
     url: jdbc:postgresql://user-db:5432/user_service_db
     username: postgres
@@ -15,3 +17,8 @@ spring:
     baseline-on-migrate: true
     schemas: user_service
     locations: classpath:db/migration
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka

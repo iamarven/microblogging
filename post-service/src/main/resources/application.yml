@@ -4,6 +4,8 @@ server:
 spring:
   profiles:
     active: prod
+  application:
+    name: post-service
 
   datasource:
     url: jdbc:postgresql://localhost:5432/microservices-db
@@ -36,6 +38,11 @@ spring:
     properties:
       spring.json.add.type.headers: false
       spring.json.trusted.packages: "*"
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
 
 user-service:
   url: http://user-service:8080

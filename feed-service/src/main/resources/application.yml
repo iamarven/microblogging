@@ -4,6 +4,8 @@ server:
 spring:
   profiles:
     active: prod
+  application:
+    name: feed-service
 
   datasource:
     url: jdbc:postgresql://localhost:5432/microservices-db
@@ -32,6 +34,11 @@ spring:
     bootstrap-servers: kafka:9092
     listener:
       missing-topics-fatal: false
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
 
 user-service:
  url: http://user-service:8080

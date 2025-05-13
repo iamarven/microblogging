@@ -1,4 +1,6 @@
 spring:
+  application:
+    name: feed-service
   datasource:
     url: jdbc:postgresql://feed-db:5432/feed_service_db
     username: postgres
@@ -27,6 +29,11 @@ spring:
     properties:
       spring.json.add.type.headers: false
       spring.json.trusted.packages: "*"
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
 
 server:
   port: 8082

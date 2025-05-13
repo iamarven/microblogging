@@ -2,6 +2,8 @@ server:
   port: 8080
 
 spring:
+  application:
+    name: user-service
   datasource:
     url: jdbc:postgresql://localhost:5432/microservices-db
     username: postgres
@@ -17,3 +19,8 @@ spring:
   flyway:
     schemas: user_service
     baseline-on-migrate: true
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
