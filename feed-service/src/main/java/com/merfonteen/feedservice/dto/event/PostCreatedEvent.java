@@ -1,4 +1,4 @@
-package com.merfonteen.feedservice.dto;
+package com.merfonteen.feedservice.dto.event;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

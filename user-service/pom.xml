@@ -5,7 +5,7 @@
 
 	<parent>
 		<groupId>com.merfonteen</groupId>
-		<artifactId>mini-social-network</artifactId>
+		<artifactId>microblogging</artifactId>
 		<version>1.0-SNAPSHOT</version>
 	</parent>
 

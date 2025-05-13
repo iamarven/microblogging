@@ -2,7 +2,7 @@ package com.merfonteen.feedservice.service.impl;
 
 import com.merfonteen.feedservice.dto.FeedDto;
 import com.merfonteen.feedservice.dto.FeedPageResponseDto;
-import com.merfonteen.feedservice.dto.PostCreatedEvent;
+import com.merfonteen.feedservice.dto.event.PostCreatedEvent;
 import com.merfonteen.feedservice.mapper.FeedMapper;
 import com.merfonteen.feedservice.model.Feed;
 import com.merfonteen.feedservice.model.Subscription;

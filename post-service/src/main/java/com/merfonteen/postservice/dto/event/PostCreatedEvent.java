@@ -1,4 +1,4 @@
-package com.merfonteen.postservice.dto;
+package com.merfonteen.postservice.dto.event;
 
 
 import lombok.AllArgsConstructor;
