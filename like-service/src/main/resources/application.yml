@@ -19,6 +19,17 @@ spring:
   flyway:
     schemas: like_service
     baseline-on-migrate: true
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    properties:
+      spring.json.add.type.headers: false
+      spring.json.trusted.packages: "*"
+
+topic:
+  like-sent: like-sent-event
 
 eureka:
   client:
