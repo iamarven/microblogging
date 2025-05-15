@@ -1,0 +1,1 @@
+CREATE INDEX idx_likes_post_id ON like_schema.likes(postId);
