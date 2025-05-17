@@ -39,6 +39,9 @@ spring:
       spring.json.add.type.headers: false
       spring.json.trusted.packages: "*"
 
+topic:
+  post-created: post-created-event
+
 eureka:
   client:
     service-url:

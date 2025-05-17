@@ -32,4 +32,10 @@ public class LikeController {
         URI location = URI.create("/api/likes/" + like.getId());
         return ResponseEntity.created(location).body(like);
     }
+
+    @DeleteMapping("/posts/{id}")
+    public ResponseEntity<LikeDto> removeLike(@PathVariable("id") Long postId,
+                                              @RequestHeader("X-User-Id") Long currentUserId) {
+        return ResponseEntity.ok(likeService.removeLike(postId, currentUserId));
+    }
 }

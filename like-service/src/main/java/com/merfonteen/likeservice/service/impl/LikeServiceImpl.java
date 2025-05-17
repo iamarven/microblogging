@@ -3,13 +3,16 @@ package com.merfonteen.likeservice.service.impl;
 import com.merfonteen.likeservice.client.PostClient;
 import com.merfonteen.likeservice.dto.LikeDto;
 import com.merfonteen.likeservice.dto.LikePageResponseDto;
+import com.merfonteen.likeservice.dto.kafkaEvent.LikeRemovedEvent;
 import com.merfonteen.likeservice.dto.kafkaEvent.LikeSentEvent;
+import com.merfonteen.likeservice.exception.BadRequestException;
 import com.merfonteen.likeservice.exception.NotFoundException;
-import com.merfonteen.likeservice.kafkaProducer.LikeSentEventProducer;
+import com.merfonteen.likeservice.kafkaProducer.LikeEventProducer;
 import com.merfonteen.likeservice.mapper.LikeMapper;
 import com.merfonteen.likeservice.model.Like;
 import com.merfonteen.likeservice.repository.LikeRepository;
 import com.merfonteen.likeservice.service.LikeService;
+import com.merfonteen.likeservice.util.LikeRateLimiter;
 import feign.FeignException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +36,8 @@ public class LikeServiceImpl implements LikeService {
     private final PostClient postClient;
     private final LikeMapper likeMapper;
     private final LikeRepository likeRepository;
-    private final LikeSentEventProducer likeSentEventProducer;
+    private final LikeRateLimiter likeRateLimiter;
+    private final LikeEventProducer likeEventProducer;
 
     @Override
     public LikePageResponseDto getLikesForPost(Long postId, int page, int size) {
@@ -66,6 +70,8 @@ public class LikeServiceImpl implements LikeService {
             return likeMapper.toDto(existing.get());
         }
 
+        likeRateLimiter.limitAmountOfLikes(currentUserId);
+
         Like newLike = Like.builder()
                 .postId(postId)
                 .userId(currentUserId)
@@ -75,16 +81,43 @@ public class LikeServiceImpl implements LikeService {
         likeRepository.save(newLike);
         log.info("New like with id '{}' was saved to database successfully", newLike.getId());
 
-        LikeSentEvent sentEvent = LikeSentEvent.builder()
+        LikeSentEvent likeSentEvent = LikeSentEvent.builder()
                 .likeId(newLike.getId())
                 .userId(currentUserId)
                 .postId(postId)
                 .build();
 
-        likeSentEventProducer.sendLikeSentEvent(sentEvent);
-        log.info("New message was sent to topic 'like-sent' successfully: {}", sentEvent);
+        likeEventProducer.sendLikeSentEvent(likeSentEvent);
+        log.info("New message was sent to topic 'like-sent' successfully: {}", likeSentEvent);
 
         return likeMapper.toDto(newLike);
+    }
+
+    @Transactional
+    @Override
+    public LikeDto removeLike(Long postId, Long currentUserId) {
+        checkPostExistsOrThrowException(postId);
+
+        Optional<Like> likeToRemove = likeRepository.findByPostIdAndUserId(postId, currentUserId);
+        likeRateLimiter.limitAmountOfUnlikes(currentUserId);
+
+        if(likeToRemove.isEmpty()) {
+            throw new BadRequestException("You did not like this post");
+        }
+
+        likeRepository.delete(likeToRemove.get());
+        log.info("Like with id '{}' was removed", likeToRemove.get().getId());
+
+        LikeRemovedEvent likeRemovedEvent = LikeRemovedEvent.builder()
+                .likeId(likeToRemove.get().getId())
+                .userId(currentUserId)
+                .postId(postId)
+                .build();
+
+        likeEventProducer.sendLikeRemovedEvent(likeRemovedEvent);
+        log.info("New message was sent to topic 'like-removed' successfully: {}", likeRemovedEvent);
+
+        return likeMapper.toDto(likeToRemove.get());
     }
 
     private void checkPostExistsOrThrowException(Long postId) {

@@ -6,4 +6,5 @@ import com.merfonteen.likeservice.dto.LikePageResponseDto;
 public interface LikeService {
     LikePageResponseDto getLikesForPost(Long postId, int page, int size);
     LikeDto likePost(Long postId, Long currentUserId);
+    LikeDto removeLike(Long postId, Long currentUserId);
 }
