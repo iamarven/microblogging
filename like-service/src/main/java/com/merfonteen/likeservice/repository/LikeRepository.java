@@ -11,6 +11,6 @@ import java.util.Optional;
 @Repository
 public interface LikeRepository extends JpaRepository<Like, Long> {
     Page<Like> findAllByPostId(Long postId, Pageable pageable);
-
     Optional<Like> findByPostIdAndUserId(Long postId, Long currentUserId);
+    long countByPostId(Long postId);
 }

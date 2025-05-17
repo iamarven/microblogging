@@ -17,12 +17,15 @@ import feign.FeignException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -38,6 +41,7 @@ public class LikeServiceImpl implements LikeService {
     private final LikeRepository likeRepository;
     private final LikeRateLimiter likeRateLimiter;
     private final LikeEventProducer likeEventProducer;
+    private final StringRedisTemplate stringRedisTemplate;
 
     @Override
     public LikePageResponseDto getLikesForPost(Long postId, int page, int size) {
@@ -60,6 +64,21 @@ public class LikeServiceImpl implements LikeService {
                 .build();
     }
 
+    @Override
+    public Long getLikeCount(Long postId) {
+        String key = "like:count:post:" + postId;
+        String cachedValue = stringRedisTemplate.opsForValue().get(key);
+
+        if(cachedValue != null) {
+            return Long.parseLong(cachedValue);
+        }
+
+        long countFromDb = likeRepository.countByPostId(postId);
+        stringRedisTemplate.opsForValue().set(key, String.valueOf(countFromDb), Duration.ofMinutes(10));
+
+        return countFromDb;
+    }
+
     @Transactional
     @Override
     public LikeDto likePost(Long postId, Long currentUserId) {
@@ -80,6 +99,8 @@ public class LikeServiceImpl implements LikeService {
 
         likeRepository.save(newLike);
         log.info("New like with id '{}' was saved to database successfully", newLike.getId());
+
+        stringRedisTemplate.opsForValue().increment("like:count:post:" + postId);
 
         LikeSentEvent likeSentEvent = LikeSentEvent.builder()
                 .likeId(newLike.getId())
@@ -107,6 +128,8 @@ public class LikeServiceImpl implements LikeService {
 
         likeRepository.delete(likeToRemove.get());
         log.info("Like with id '{}' was removed", likeToRemove.get().getId());
+
+        stringRedisTemplate.opsForValue().decrement("like:count:post:" + postId);
 
         LikeRemovedEvent likeRemovedEvent = LikeRemovedEvent.builder()
                 .likeId(likeToRemove.get().getId())

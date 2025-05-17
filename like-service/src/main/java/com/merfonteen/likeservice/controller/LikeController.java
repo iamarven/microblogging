@@ -25,6 +25,11 @@ public class LikeController {
         return ResponseEntity.ok(likeService.getLikesForPost(postId, page, size));
     }
 
+    @GetMapping("/posts/{id}/count")
+    public ResponseEntity<Long> getLikeCount(@PathVariable("id") Long postId) {
+        return ResponseEntity.ok(likeService.getLikeCount(postId));
+    }
+
     @PostMapping("/posts/{id}")
     public ResponseEntity<LikeDto> likePost(@PathVariable("id") Long postId,
                                         @RequestHeader("X-User-Id") Long currentUserId) {
