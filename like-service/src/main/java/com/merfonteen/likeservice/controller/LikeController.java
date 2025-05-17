@@ -34,7 +34,7 @@ public class LikeController {
     public ResponseEntity<LikeDto> likePost(@PathVariable("id") Long postId,
                                         @RequestHeader("X-User-Id") Long currentUserId) {
         LikeDto like = likeService.likePost(postId, currentUserId);
-        URI location = URI.create("/api/likes/" + like.getId());
+        URI location = URI.create("/api/likes/" + like.getLikeId());
         return ResponseEntity.created(location).body(like);
     }
 

@@ -12,7 +12,7 @@ import java.time.Instant;
 @AllArgsConstructor
 @NoArgsConstructor
 public class LikeDto {
-    private Long id;
+    private Long likeId;
     private Long userId;
     private Long postId;
     private Instant createdAt;
