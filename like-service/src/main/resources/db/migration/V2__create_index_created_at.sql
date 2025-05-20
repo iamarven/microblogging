@@ -1,1 +1,1 @@
-CREATE INDEX idx_likes_created_at ON like_schema.likes(createdAt);
+CREATE INDEX idx_likes_created_at ON like_service.likes(created_at);

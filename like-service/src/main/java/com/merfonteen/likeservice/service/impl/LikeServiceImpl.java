@@ -128,7 +128,10 @@ public class LikeServiceImpl implements LikeService {
         likeRepository.delete(likeToRemove.get());
         log.info("Like with id '{}' was removed", likeToRemove.get().getId());
 
-        stringRedisTemplate.opsForValue().decrement("like:count:post:" + postId);
+        String cacheKey = "like:count:post:" + postId;
+        if(Boolean.TRUE.equals(stringRedisTemplate.hasKey(cacheKey))) {
+            stringRedisTemplate.opsForValue().decrement(cacheKey);
+        }
 
         LikeRemovedEvent likeRemovedEvent = LikeRemovedEvent.builder()
                 .likeId(likeToRemove.get().getId())
@@ -151,3 +154,4 @@ public class LikeServiceImpl implements LikeService {
         }
     }
 }
+

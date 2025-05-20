@@ -13,6 +13,7 @@
     <module>user-service</module>
     <module>post-service</module>
     <module>feed-service</module>
+    <module>like-service</module>
     <module>service-discovery</module>
   </modules>
 
@@ -75,5 +76,4 @@
       </plugins>
     </pluginManagement>
   </build>
-
 </project>

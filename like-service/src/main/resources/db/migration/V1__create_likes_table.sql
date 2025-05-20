@@ -1,10 +1,10 @@
-CREATE SCHEMA IF NOT EXISTS like_schema;
+CREATE SCHEMA IF NOT EXISTS like_service;
 
-CREATE TABLE like_schema.likes(
+CREATE TABLE like_service.likes(
   id BIGSERIAL PRIMARY KEY NOT NULL,
-  postId BIGINT NOT NULL,
-  userId BIGINT NOT NULL,
-  createdAt TIMESTAMP NOT NULL DEFAULT NOW(),
+  post_id BIGINT NOT NULL,
+  user_id BIGINT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
 
-  CONSTRAINT unique_like UNIQUE (userId, postId)
+  CONSTRAINT unique_like UNIQUE (user_id, post_id)
 );
