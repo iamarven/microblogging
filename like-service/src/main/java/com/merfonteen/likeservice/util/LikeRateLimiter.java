@@ -4,6 +4,7 @@ import com.merfonteen.likeservice.exception.TooManyRequestsException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -13,10 +14,10 @@ import java.time.Duration;
 @Component
 public class LikeRateLimiter {
 
+    private final StringRedisTemplate redisTemplate;
+
     private static final int MAX_LIKES = 10;
     private static final Duration DURATION = Duration.ofSeconds(5);
-
-    private final RedisTemplate<String, Object> redisTemplate;
 
     public void limitAmountOfLikes(Long userId) {
         String key = "like-limiter::user::" + userId;
