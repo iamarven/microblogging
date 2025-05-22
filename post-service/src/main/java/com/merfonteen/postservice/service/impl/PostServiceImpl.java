@@ -24,8 +24,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -42,6 +44,7 @@ public class PostServiceImpl implements PostService {
     private final RateLimiterService rateLimiterService;
     private final PostCacheService postCacheService;
     private final PostEventProducer postEventProducer;
+    private final StringRedisTemplate stringRedisTemplate;
 
     @Cacheable(value = "post-by-id", key = "#id", unless = "#result == null")
     @Override
@@ -75,6 +78,22 @@ public class PostServiceImpl implements PostService {
                 .build();
     }
 
+    @Override
+    public Long getPostCount(Long userId) {
+        String cacheKey = "post:count:user:" + userId;
+        String cachedValue = stringRedisTemplate.opsForValue().get(cacheKey);
+
+        if(cachedValue != null) {
+            return Long.parseLong(cachedValue);
+        }
+
+        Long numberOfPostsFromDb = postRepository.countByAuthorId(userId);
+
+        stringRedisTemplate.opsForValue().set(cacheKey, String.valueOf(numberOfPostsFromDb), Duration.ofMinutes(10));
+
+        return numberOfPostsFromDb;
+    }
+
     @Transactional
     @Override
     public PostResponseDto createPost(Long currentUserId, PostCreateDto createDto) {
@@ -91,6 +110,8 @@ public class PostServiceImpl implements PostService {
 
         postRepository.save(post);
         log.info("Post with id '{}' successfully created by user '{}'", post.getId(), currentUserId);
+
+        stringRedisTemplate.opsForValue().increment("post:count:user:" + currentUserId);
 
         postEventProducer.sendPostCreatedEvent(new PostCreatedEvent(post.getId(), currentUserId, Instant.now()));
         postCacheService.evictUserPostsCacheByUserId(currentUserId);
@@ -125,6 +146,11 @@ public class PostServiceImpl implements PostService {
 
         postRepository.deleteById(postToDelete.getId());
         log.info("Post with id '{}' successfully deleted by user '{}'", id, currentUserId);
+
+        String cacheKey = "post:count:user:" + currentUserId;
+        if(Boolean.TRUE.equals(stringRedisTemplate.hasKey(cacheKey))) {
+            stringRedisTemplate.opsForValue().decrement(cacheKey);
+        }
 
         postCacheService.evictUserPostsCacheByUserId(currentUserId);
         return postMapper.toDto(postToDelete);

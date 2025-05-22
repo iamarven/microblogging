@@ -9,4 +9,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface PostRepository extends JpaRepository<Post, Long> {
     Page<Post> findAllByAuthorId(Long authorId, Pageable pageable);
+    long countByAuthorId(Long authorId);
 }

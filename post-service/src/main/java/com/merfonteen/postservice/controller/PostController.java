@@ -37,6 +37,11 @@ public class PostController {
         return ResponseEntity.ok(postService.getUserPosts(userId, page, size, postSortField));
     }
 
+    @GetMapping("/users/{id}/count")
+    public ResponseEntity<Long> countPostsForUser(@PathVariable("id") Long userId) {
+        return ResponseEntity.ok(postService.getPostCount(userId));
+    }
+
     @PostMapping
     public ResponseEntity<PostResponseDto> createPost(@RequestHeader(name = "X-User-Id") Long currentUserId,
                                                       @RequestBody @Valid PostCreateDto createDto) {
