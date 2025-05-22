@@ -48,7 +48,6 @@ public class KafkaConfig {
         config.put(ConsumerConfig.GROUP_ID_CONFIG, "feed-group");
         config.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
         config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
-
         return new DefaultKafkaConsumerFactory<>(config);
     }
 
