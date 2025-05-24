@@ -9,4 +9,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface FeedRepository extends JpaRepository<Feed, Long> {
     Page<Feed> findAllByUserId(Long userId, Pageable pageable);
+    int deleteAllByPostId(Long postId);
 }

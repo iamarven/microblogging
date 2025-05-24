@@ -3,6 +3,7 @@ package com.merfonteen.feedservice.service.impl;
 import com.merfonteen.feedservice.dto.FeedDto;
 import com.merfonteen.feedservice.dto.FeedPageResponseDto;
 import com.merfonteen.feedservice.dto.event.PostCreatedEvent;
+import com.merfonteen.feedservice.dto.event.PostRemovedEvent;
 import com.merfonteen.feedservice.mapper.FeedMapper;
 import com.merfonteen.feedservice.model.Feed;
 import com.merfonteen.feedservice.model.Subscription;
@@ -86,6 +87,13 @@ public class FeedServiceImpl implements FeedService {
         if(!buffer.isEmpty()) {
             safeSaveFeeds(buffer);
         }
+    }
+
+    @Transactional
+    @Override
+    public void deleteFeedsByPostId(PostRemovedEvent event) {
+        int deleted = feedRepository.deleteAllByPostId(event.getPostId());
+        log.info("Deleted {} feeds by postId={}", deleted, event.getPostId());
     }
 
     private void safeSaveFeeds(List<Feed> feedsToSave) {

@@ -27,11 +27,11 @@ spring:
 
   data:
     redis:
-      host: localhost
+      host: redis
       port: 6379
 
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: kafka:9092
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
@@ -41,6 +41,7 @@ spring:
 
 topic:
   post-created: post-created-event
+  post-removed: post-removed-event
 
 eureka:
   client:

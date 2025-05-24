@@ -15,7 +15,7 @@ public class PostEventListener {
 
     private final LikeService likeService;
 
-    @KafkaListener(topics = "${topic.post-removed}")
+    @KafkaListener(topics = "${topic.post-removed}", groupId = "like-group")
     public void deleteLikesOnPost(PostRemovedEvent event, Acknowledgment ack) {
         log.info("Received post-removed-event: {}", event);
         likeService.removeLikesOnPost(event);

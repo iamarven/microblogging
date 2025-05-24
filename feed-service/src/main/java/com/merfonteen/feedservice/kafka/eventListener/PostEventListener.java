@@ -1,6 +1,7 @@
-package com.merfonteen.feedservice.kafkaListener;
+package com.merfonteen.feedservice.kafka.eventListener;
 
 import com.merfonteen.feedservice.dto.event.PostCreatedEvent;
+import com.merfonteen.feedservice.dto.event.PostRemovedEvent;
 import com.merfonteen.feedservice.service.FeedService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,8 +18,15 @@ public class PostEventListener {
 
     @KafkaListener(topics = "${topic.post-created}", groupId = "feed-group")
     public void handlePostCreated(PostCreatedEvent event, Acknowledgment ack) {
-        log.info("Received event: {}", event);
+        log.info("Received post-created-event: {}", event);
         feedService.distributePostToSubscribers(event);
+        ack.acknowledge();
+    }
+
+    @KafkaListener(topics = "${topic.post-removed}", groupId = "feed-group")
+    public void handlePostRemoved(PostRemovedEvent event, Acknowledgment ack) {
+        log.info("Received post-removed-event: {}", event);
+        feedService.deleteFeedsByPostId(event);
         ack.acknowledge();
     }
 }
