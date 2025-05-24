@@ -1,31 +1,35 @@
 server:
-  port: 8083
+  port: 8084
 
 spring:
+  profiles:
+    active: prod
   application:
-    name: like-service
+    name: notification-service
+
   datasource:
-    url: jdbc:postgresql://like-db:5432/like_service_db
+    url: jdbc:postgresql://localhost:5432/microservices-db
     username: postgres
-    password: postgres
+    password: 1234
     driver-class-name: org.postgresql.Driver
+
   jpa:
     hibernate:
       ddl-auto: none
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        default_schema: like_service
+        default_schema: notification_service
+
   flyway:
-    schemas: like_service
+    schemas: notification_service
     baseline-on-migrate: true
-    locations: classpath:db/migration
+
   data:
     redis:
       host: redis
       port: 6379
-  cache:
-    type: redis
+
   kafka:
     bootstrap-servers: kafka:9092
     producer:
@@ -35,16 +39,7 @@ spring:
       spring.json.add.type.headers: false
       spring.json.trusted.packages: "*"
 
-topic:
-  like-sent: like-sent-event
-  like-removed: like-removed-event
-  post-removed: post-removed-event
-
 eureka:
   client:
     service-url:
       defaultZone: http://eureka-server:8761/eureka
-    enabled: false
-
-post-service:
-  url: http://user-service:8081

@@ -11,14 +11,16 @@ public class GatewayRoutesConfig {
     @Bean
     public RouteLocator customRouteLocator(RouteLocatorBuilder builder) {
         return builder.routes()
-                .route("user-service", r -> r.path("/users/**")
+                .route("user-service", r -> r.path("/api/users/**")
                         .uri("lb://user-service"))
-                .route("post-service", r -> r.path("/posts/**")
+                .route("post-service", r -> r.path("/api/posts/**")
                         .uri("lb://post-service"))
-                .route("feed-service", r -> r.path("/feed/**")
+                .route("feed-service", r -> r.path("/api/feed/**")
                         .uri("lb://feed-service"))
-                .route("like-service", r -> r.path("/likes/**")
+                .route("like-service", r -> r.path("/api/likes/**")
                         .uri("lb://like-service"))
+                .route("notification-service", r -> r.path("/api/notifications/**")
+                        .uri("lb://notification-service"))
                 .build();
     }
 }
