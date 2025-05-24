@@ -38,6 +38,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return new ErrorResponse(HttpStatus.FORBIDDEN.value(), ex.getMessage(), Instant.now());
     }
 
+    @ExceptionHandler(BadRequestException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleBadRequestException(BadRequestException ex) {
+        return new ErrorResponse(HttpStatus.BAD_REQUEST.value(), ex.getMessage(), Instant.now());
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGlobalException(Exception ex) {
         log.error("Unexpected error occurred: {}", ex.getMessage(), ex);

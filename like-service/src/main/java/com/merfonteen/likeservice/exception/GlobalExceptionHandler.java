@@ -26,6 +26,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return new ErrorResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage(), Instant.now());
     }
 
+    @ExceptionHandler(BadRequestException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleBadRequestException(BadRequestException ex) {
+        return new ErrorResponse(HttpStatus.BAD_REQUEST.value(), ex.getMessage(), Instant.now());
+    }
+
     @ExceptionHandler(TooManyRequestsException.class)
     @ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)
     public ErrorResponse handleTooManyRequestsException(TooManyRequestsException ex) {

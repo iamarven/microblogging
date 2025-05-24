@@ -55,6 +55,15 @@ public class PostServiceImpl implements PostService {
         return postMapper.toDto(post);
     }
 
+    @Override
+    public Long getPostAuthorId(Long postId) {
+        Optional<Post> post = postRepository.findById(postId);
+        if(post.isEmpty()) {
+            throw new NotFoundException(String.format("Post with id '%d' not found", postId));
+        }
+        return post.get().getAuthorId();
+    }
+
     @Cacheable(value = "user-posts", key = "#userId + ':' + #page + ':' + #size")
     @Override
     public UserPostsPageResponseDto getUserPosts(Long userId, int page, int size, PostSortField sortField) {

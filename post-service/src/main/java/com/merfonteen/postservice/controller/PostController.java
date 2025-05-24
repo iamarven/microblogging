@@ -28,6 +28,11 @@ public class PostController {
         return ResponseEntity.ok(postService.getPostById(id));
     }
 
+    @GetMapping("/{id}/author-id")
+    public ResponseEntity<Long> getPostAuthorId(@PathVariable("id") Long id) {
+        return ResponseEntity.ok(postService.getPostAuthorId(id));
+    }
+
     @GetMapping("/users/{userId}")
     public ResponseEntity<UserPostsPageResponseDto> getUserPosts(@PathVariable("userId") Long userId,
                                                                  @RequestParam(defaultValue = "0") @Min(0) int page,

@@ -8,6 +8,7 @@ import com.merfonteen.postservice.model.enums.PostSortField;
 
 public interface PostService {
     PostResponseDto getPostById(Long id);
+    Long getPostAuthorId(Long postId);
     UserPostsPageResponseDto getUserPosts(Long userId, int page, int size, PostSortField postSortField);
     Long getPostCount(Long userId);
     PostResponseDto createPost(Long currentUserId, PostCreateDto createDto);

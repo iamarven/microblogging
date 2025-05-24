@@ -35,8 +35,14 @@ spring:
       spring.json.add.type.headers: false
       spring.json.trusted.packages: "*"
 
+topic:
+  like-sent: like-sent-event
+
 eureka:
   client:
     service-url:
       defaultZone: http://eureka-server:8761/eureka
     enabled: true
+
+post-service:
+  url: http://user-service:8081

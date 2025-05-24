@@ -1,5 +1,6 @@
-package com.merfonteen.userservice.exception;
+package com.merfonteen.notificationservice.exception;
 
+import jakarta.ws.rs.ForbiddenException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -30,12 +31,6 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public ErrorResponse handleForbiddenException(ForbiddenException ex) {
         return new ErrorResponse(HttpStatus.FORBIDDEN.value(), ex.getMessage(), Instant.now());
-    }
-
-    @ExceptionHandler(BadRequestException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ErrorResponse handleBadRequestException(BadRequestException ex) {
-        return new ErrorResponse(HttpStatus.BAD_REQUEST.value(), ex.getMessage(), Instant.now());
     }
 
     @ExceptionHandler(Exception.class)
