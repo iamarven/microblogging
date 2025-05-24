@@ -2,7 +2,7 @@ package com.merfonteen.likeservice.service.impl;
 
 import com.merfonteen.likeservice.client.PostClient;
 import com.merfonteen.likeservice.dto.LikeDto;
-import com.merfonteen.likeservice.kafkaProducer.LikeEventProducer;
+import com.merfonteen.likeservice.kafka.eventProducer.LikeEventProducer;
 import com.merfonteen.likeservice.model.Like;
 import com.merfonteen.likeservice.repository.LikeRepository;
 import com.merfonteen.likeservice.service.impl.config.RestTemplateConfig;

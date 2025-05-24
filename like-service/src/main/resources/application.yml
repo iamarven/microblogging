@@ -37,10 +37,6 @@ spring:
       spring.json.add.type.headers: false
       spring.json.trusted.packages: "*"
 
-topic:
-  like-sent: like-sent-event
-  like-removed: like-removed-event
-
 eureka:
   client:
     service-url:

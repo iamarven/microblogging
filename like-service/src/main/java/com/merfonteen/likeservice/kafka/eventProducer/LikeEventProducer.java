@@ -1,4 +1,4 @@
-package com.merfonteen.likeservice.kafkaProducer;
+package com.merfonteen.likeservice.kafka.eventProducer;
 
 import com.merfonteen.likeservice.dto.kafkaEvent.LikeRemovedEvent;
 import com.merfonteen.likeservice.dto.kafkaEvent.LikeSentEvent;

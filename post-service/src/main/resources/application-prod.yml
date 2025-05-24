@@ -35,6 +35,7 @@ spring:
 
 topic:
   post-created: post-created-event
+  post-removed: post-removed-event
 
 eureka:
   client:

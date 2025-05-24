@@ -5,9 +5,10 @@ import com.merfonteen.likeservice.dto.LikeDto;
 import com.merfonteen.likeservice.dto.LikePageResponseDto;
 import com.merfonteen.likeservice.dto.kafkaEvent.LikeRemovedEvent;
 import com.merfonteen.likeservice.dto.kafkaEvent.LikeSentEvent;
+import com.merfonteen.likeservice.dto.kafkaEvent.PostRemovedEvent;
 import com.merfonteen.likeservice.exception.BadRequestException;
 import com.merfonteen.likeservice.exception.NotFoundException;
-import com.merfonteen.likeservice.kafkaProducer.LikeEventProducer;
+import com.merfonteen.likeservice.kafka.eventProducer.LikeEventProducer;
 import com.merfonteen.likeservice.mapper.LikeMapper;
 import com.merfonteen.likeservice.model.Like;
 import com.merfonteen.likeservice.repository.LikeRepository;
@@ -143,6 +144,13 @@ public class LikeServiceImpl implements LikeService {
         log.info("New message was sent to topic 'like-removed' successfully: {}", likeRemovedEvent);
 
         return likeMapper.toDto(likeToRemove.get());
+    }
+
+    @Transactional
+    @Override
+    public void removeLikesOnPost(PostRemovedEvent event) {
+        int deleted = likeRepository.deleteAllByPostId(event.getPostId());
+        log.info("Deleted {} likes for postId={}", deleted, event.getPostId());
     }
 
     private void checkPostExistsOrThrowException(Long postId) {

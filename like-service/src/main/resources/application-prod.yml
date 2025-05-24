@@ -38,6 +38,7 @@ spring:
 topic:
   like-sent: like-sent-event
   like-removed: like-removed-event
+  post-removed: post-removed-event
 
 eureka:
   client:

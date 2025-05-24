@@ -3,6 +3,7 @@ package com.merfonteen.postservice.service.impl;
 import com.merfonteen.postservice.client.UserClient;
 import com.merfonteen.postservice.dto.*;
 import com.merfonteen.postservice.dto.event.PostCreatedEvent;
+import com.merfonteen.postservice.dto.event.PostRemovedEvent;
 import com.merfonteen.postservice.exception.NotFoundException;
 import com.merfonteen.postservice.kafkaProducer.PostEventProducer;
 import com.merfonteen.postservice.mapper.PostMapper;
@@ -146,6 +147,8 @@ public class PostServiceImpl implements PostService {
 
         postRepository.deleteById(postToDelete.getId());
         log.info("Post with id '{}' successfully deleted by user '{}'", id, currentUserId);
+
+        postEventProducer.sendPostRemovedEvent(new PostRemovedEvent(id, currentUserId));
 
         String cacheKey = "post:count:user:" + currentUserId;
         if(Boolean.TRUE.equals(stringRedisTemplate.hasKey(cacheKey))) {
