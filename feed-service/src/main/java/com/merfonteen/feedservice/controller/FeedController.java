@@ -36,6 +36,11 @@ public class FeedController {
         return ResponseEntity.ok(subscriptionService.getMySubscribers(currentUserId));
     }
 
+    @GetMapping("/subscribers/users/{id}")
+    public ResponseEntity<List<SubscriptionDto>> getUserSubscribers(@PathVariable("id") Long id) {
+        return ResponseEntity.ok(subscriptionService.getUserSubscribersByUserId(id));
+    }
+
     @PostMapping("/follow/{targetUserId}")
     public ResponseEntity<SubscriptionDto> follow(@PathVariable("targetUserId") Long targetUserId,
                                                   @RequestHeader("X-User-Id") Long currentUserId) {

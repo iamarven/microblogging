@@ -13,6 +13,10 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         default_schema: feed_service
+      jdbc:
+        batch_size: 50
+      order_updates: true
+      order_inserts: true
   flyway:
     enabled: true
     schemas: feed_service
@@ -33,6 +37,7 @@ spring:
 topic:
   post-created: post-created-event
   post-removed: post-removed-event
+  subscription-created: subscription-created-event
 
 eureka:
   client:

@@ -2,8 +2,10 @@ package com.merfonteen.feedservice.service.impl;
 
 import com.merfonteen.feedservice.client.UserClient;
 import com.merfonteen.feedservice.dto.SubscriptionDto;
+import com.merfonteen.feedservice.dto.event.SubscriptionCreatedEvent;
 import com.merfonteen.feedservice.exception.BadRequestException;
 import com.merfonteen.feedservice.exception.NotFoundException;
+import com.merfonteen.feedservice.kafka.eventProducer.SubscriptionEventProducer;
 import com.merfonteen.feedservice.mapper.SubscriptionMapper;
 import com.merfonteen.feedservice.model.Subscription;
 import com.merfonteen.feedservice.repository.SubscriptionRepository;
@@ -28,6 +30,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     private final UserClient userClient;
     private final SubscriptionMapper subscriptionMapper;
     private final SubscriptionRepository subscriptionRepository;
+    private final SubscriptionEventProducer subscriptionEventProducer;
 
     @Override
     public List<SubscriptionDto> getMySubscriptions(Long currentUserId) {
@@ -47,12 +50,20 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 .toList();
     }
 
+    @Override
+    public List<SubscriptionDto> getUserSubscribersByUserId(Long userId) {
+        checkUserExistsOrThrowException(userId);
+        List<Subscription> userSubscribers = subscriptionRepository.findAllByFolloweeId(userId);
+        log.info("Getting all user's subscribers for user with id: {}", userId);
+        return subscriptionMapper.toDtos(userSubscribers);
+    }
+
     @Transactional
     @Override
     public SubscriptionDto follow(Long targetUserId, Long currentUserId) {
         checkUserExistsOrThrowException(targetUserId);
 
-        if(Objects.equals(currentUserId, targetUserId)) {
+        if (Objects.equals(currentUserId, targetUserId)) {
             throw new BadRequestException("Cannot follow yourself");
         }
 
@@ -65,6 +76,9 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         subscriptionRepository.save(subscription);
         log.info("Subscription was successfully created with follower id '{}' and followee id '{}'",
                 currentUserId, targetUserId);
+
+        subscriptionEventProducer.sendSubscriptionCreatedEvent(new SubscriptionCreatedEvent(
+                        subscription.getId(), currentUserId, targetUserId));
 
         return subscriptionMapper.toDto(subscription);
     }

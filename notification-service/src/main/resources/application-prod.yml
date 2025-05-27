@@ -16,6 +16,10 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         default_schema: notification_service
+        jdbc:
+          batch_size: 50
+        order_updates: true
+        order_inserts: true
   flyway:
     schemas: like_service
     baseline-on-migrate: true
@@ -37,6 +41,8 @@ spring:
 
 topic:
   like-sent: like-sent-event
+  post-created: post-created-event
+  subscription-created: subscription-created-event
 
 eureka:
   client:
@@ -46,3 +52,5 @@ eureka:
 
 post-service:
   url: http://user-service:8081
+feed-service:
+  url: http://feed-service:8082

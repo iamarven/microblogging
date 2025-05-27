@@ -33,6 +33,9 @@ public class Notification {
     @Column(nullable = false)
     private String message;
 
+    @Column(name = "is_read", nullable = false)
+    private Boolean isRead;
+
     @Builder.Default
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
