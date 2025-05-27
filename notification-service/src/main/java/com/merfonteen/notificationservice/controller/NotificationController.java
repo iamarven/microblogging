@@ -1,5 +1,6 @@
 package com.merfonteen.notificationservice.controller;
 
+import com.merfonteen.notificationservice.dto.NotificationDto;
 import com.merfonteen.notificationservice.dto.NotificationsPageDto;
 import com.merfonteen.notificationservice.service.NotificationService;
 import lombok.RequiredArgsConstructor;
@@ -23,5 +24,11 @@ public class NotificationController {
     @GetMapping("/unread/count")
     public ResponseEntity<Long> countUnreadNotifications(@RequestHeader("X-User-Id") Long currentUserId) {
         return ResponseEntity.ok(notificationService.countUnreadNotifications(currentUserId));
+    }
+
+    @PatchMapping("/{id}/read")
+    public ResponseEntity<NotificationDto> markAsRead(@PathVariable("id") Long id,
+                                                      @RequestHeader("X-User-Id") Long currentUserId) {
+        return ResponseEntity.ok(notificationService.markAsRead(id, currentUserId));
     }
 }

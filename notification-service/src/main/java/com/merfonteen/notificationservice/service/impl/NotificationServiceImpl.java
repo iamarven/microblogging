@@ -26,6 +26,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -41,7 +42,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     @Override
     public NotificationsPageDto getMyNotifications(Long currentUserId, int page, int size) {
-        if(size > 100) {
+        if (size > 100) {
             size = 100;
         }
 
@@ -51,7 +52,7 @@ public class NotificationServiceImpl implements NotificationService {
         log.info("User '{}' fetched {} notifications (page={}, size={})",
                 currentUserId, userNotifications.getNumberOfElements(), page, size);
 
-        for(Notification notification : userNotifications) {
+        for (Notification notification : userNotifications) {
             notification.setIsRead(true);
         }
 
@@ -69,10 +70,10 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public Long countUnreadNotifications(Long currentUserId) {
-        String cacheKey = "user:notifications:count:" + currentUserId;
+        String cacheKey = "user:notifications:unread:count:" + currentUserId;
         String cacheValue = stringRedisTemplate.opsForValue().get(cacheKey);
 
-        if(cacheValue != null) {
+        if (cacheValue != null) {
             return Long.parseLong(cacheValue);
         }
 
@@ -80,6 +81,24 @@ public class NotificationServiceImpl implements NotificationService {
         stringRedisTemplate.opsForValue().set(cacheKey, String.valueOf(countFromDb), Duration.ofMinutes(10));
 
         return countFromDb;
+    }
+
+    @Transactional
+    @Override
+    public NotificationDto markAsRead(Long notificationId, Long currentUserId) {
+        Optional<Notification> notification = notificationRepository.findByIdAndReceiverId(notificationId, currentUserId);
+
+        if(notification.isEmpty()) {
+            log.warn("User '{}' tried to mark as read non-existing notification '{}'", currentUserId, notificationId);
+            throw new NotFoundException(String.format("Doesn't exist notification with id '%d' and user id '%d'",
+                            notificationId, currentUserId));
+        }
+
+        notification.get().setIsRead(true);
+        Notification saved = notificationRepository.save(notification.get());
+        stringRedisTemplate.opsForValue().decrement("user:notifications:unread:count:" + currentUserId);
+
+        return notificationMapper.toDto(saved);
     }
 
     @Transactional
@@ -104,7 +123,7 @@ public class NotificationServiceImpl implements NotificationService {
                 .createdAt(Instant.now())
                 .build();
 
-        stringRedisTemplate.opsForValue().increment("user:notifications:count:" + postAuthorId);
+        stringRedisTemplate.opsForValue().increment("user:notifications:unread:count:" + postAuthorId);
         notificationRepository.save(notification);
     }
 
@@ -114,8 +133,8 @@ public class NotificationServiceImpl implements NotificationService {
         List<SubscriptionDto> userSubscribers = getUserSubscribers(authorId);
         List<Notification> buffer = new ArrayList<>();
 
-        if(!userSubscribers.isEmpty()) {
-            for(SubscriptionDto subscription : userSubscribers) {
+        if (!userSubscribers.isEmpty()) {
+            for (SubscriptionDto subscription : userSubscribers) {
                 Notification notification = Notification.builder()
                         .senderId(authorId)
                         .receiverId(subscription.getFollowerId())
@@ -127,15 +146,15 @@ public class NotificationServiceImpl implements NotificationService {
                         .build();
 
                 buffer.add(notification);
-                stringRedisTemplate.opsForValue().increment("user:notifications:count:" + subscription.getFollowerId());
+                stringRedisTemplate.opsForValue().increment("user:notifications:unread:count:" + subscription.getFollowerId());
 
-                if(buffer.size() == 50) {
+                if (buffer.size() == 50) {
                     notificationRepository.saveAll(buffer);
                     buffer.clear();
                 }
             }
 
-            if(!buffer.isEmpty()) {
+            if (!buffer.isEmpty()) {
                 safeSaveNotifications(buffer);
             }
         }
@@ -153,7 +172,7 @@ public class NotificationServiceImpl implements NotificationService {
                 .createdAt(Instant.now())
                 .build();
 
-        stringRedisTemplate.opsForValue().increment("user:notifications:count:" + followeeId);
+        stringRedisTemplate.opsForValue().increment("user:notifications:unread:count:" + followeeId);
         notificationRepository.save(notification);
     }
 
