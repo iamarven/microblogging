@@ -17,8 +17,9 @@ public class NotificationController {
     @GetMapping
     public ResponseEntity<NotificationsPageDto> getMyNotifications(@RequestHeader("X-User-Id") Long currentUserId,
                                                                    @RequestParam(defaultValue = "0") int page,
-                                                                   @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(notificationService.getMyNotifications(currentUserId, page, size));
+                                                                   @RequestParam(defaultValue = "10") int size,
+                                                                   @RequestParam(defaultValue = "ALL") String filter) {
+        return ResponseEntity.ok(notificationService.getMyNotifications(currentUserId, page, size, filter));
     }
 
     @GetMapping("/unread/count")

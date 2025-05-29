@@ -5,6 +5,7 @@ import com.merfonteen.notificationservice.dto.NotificationDto;
 import com.merfonteen.notificationservice.dto.NotificationsPageDto;
 import com.merfonteen.notificationservice.dto.SubscriptionDto;
 import com.merfonteen.notificationservice.mapper.NotificationMapper;
+import com.merfonteen.notificationservice.model.enums.NotificationFilter;
 import com.merfonteen.notificationservice.repository.NotificationRepository;
 import com.merfonteen.notificationservice.client.PostClient;
 import com.merfonteen.notificationservice.exception.NotFoundException;
@@ -41,13 +42,24 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Transactional
     @Override
-    public NotificationsPageDto getMyNotifications(Long currentUserId, int page, int size) {
+    public NotificationsPageDto getMyNotifications(Long currentUserId, int page, int size, String filterRaw) {
         if (size > 100) {
             size = 100;
         }
+        NotificationFilter filter = NotificationFilter.from(filterRaw);
 
         PageRequest request = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<Notification> userNotifications = notificationRepository.findAllByReceiverId(currentUserId, request);
+        Page<Notification> userNotifications;
+
+        switch (filter) {
+            case READ -> userNotifications =
+                    notificationRepository.findAllByReceiverIdAndIsReadTrue(currentUserId, request);
+            case UNREAD -> userNotifications =
+                    notificationRepository.findAllByReceiverIdAndIsReadFalse(currentUserId, request);
+            default -> userNotifications =
+                    notificationRepository.findAllByReceiverId(currentUserId, request);
+        }
+
         List<NotificationDto> notificationDtos = notificationMapper.toDtos(userNotifications.getContent());
         log.info("User '{}' fetched {} notifications (page={}, size={})",
                 currentUserId, userNotifications.getNumberOfElements(), page, size);
