@@ -1,0 +1,1 @@
+CREATE INDEX idx_notifications_created_at ON notification_service.notifications(created_at);
