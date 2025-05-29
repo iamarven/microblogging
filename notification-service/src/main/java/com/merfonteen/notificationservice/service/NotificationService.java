@@ -7,6 +7,7 @@ public interface NotificationService {
     NotificationsPageDto getMyNotifications(Long currentUserId, int page, int size, String filter);
     Long countUnreadNotifications(Long currentUserId);
     NotificationDto markAsRead(Long notificationId, Long currentUserId);
+    NotificationDto deleteNotification(Long id, Long currentUserId);
     void sendLikeNotification(Long senderId, Long likeId, Long postId);
     void sendPostNotification(Long postId, Long authorId);
     void sendFollowNotification(Long followerId, Long followeeId, Long subscriptionId);

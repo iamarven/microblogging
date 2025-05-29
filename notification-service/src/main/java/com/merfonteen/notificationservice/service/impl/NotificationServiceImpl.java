@@ -4,6 +4,7 @@ import com.merfonteen.notificationservice.client.FeedClient;
 import com.merfonteen.notificationservice.dto.NotificationDto;
 import com.merfonteen.notificationservice.dto.NotificationsPageDto;
 import com.merfonteen.notificationservice.dto.SubscriptionDto;
+import com.merfonteen.notificationservice.exception.BadRequestException;
 import com.merfonteen.notificationservice.mapper.NotificationMapper;
 import com.merfonteen.notificationservice.model.enums.NotificationFilter;
 import com.merfonteen.notificationservice.repository.NotificationRepository;
@@ -24,10 +25,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -111,6 +109,22 @@ public class NotificationServiceImpl implements NotificationService {
         stringRedisTemplate.opsForValue().decrement("user:notifications:unread:count:" + currentUserId);
 
         return notificationMapper.toDto(saved);
+    }
+
+    @Transactional
+    @Override
+    public NotificationDto deleteNotification(Long id, Long currentUserId) {
+        Optional<Notification> notificationToDelete = notificationRepository.findById(id);
+        if(notificationToDelete.isPresent()) {
+            if(!Objects.equals(notificationToDelete.get().getReceiverId(), currentUserId)) {
+                throw new BadRequestException("You cannot delete not your own notifications");
+            }
+        } else {
+            throw new NotFoundException(String.format("Notification with id '%d' not found", id));
+        }
+        notificationRepository.delete(notificationToDelete.get());
+        log.info("Deleted a notification '{}' by user '{}'", id, currentUserId);
+        return notificationMapper.toDto(notificationToDelete.get());
     }
 
     @Transactional

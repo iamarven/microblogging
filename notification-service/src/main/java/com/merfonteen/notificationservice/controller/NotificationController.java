@@ -32,4 +32,10 @@ public class NotificationController {
                                                       @RequestHeader("X-User-Id") Long currentUserId) {
         return ResponseEntity.ok(notificationService.markAsRead(id, currentUserId));
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<NotificationDto> deleteNotification(@PathVariable("id") Long id,
+                                                              @RequestHeader("X-User-Id") Long currentUserId) {
+        return ResponseEntity.ok(notificationService.deleteNotification(id, currentUserId));
+    }
 }
