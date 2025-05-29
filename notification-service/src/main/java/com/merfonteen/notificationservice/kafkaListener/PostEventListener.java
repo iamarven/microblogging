@@ -1,6 +1,8 @@
 package com.merfonteen.notificationservice.kafkaListener;
 
 import com.merfonteen.notificationservice.dto.event.PostCreatedEvent;
+import com.merfonteen.notificationservice.dto.event.PostRemovedEvent;
+import com.merfonteen.notificationservice.model.enums.NotificationType;
 import com.merfonteen.notificationservice.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +21,13 @@ public class PostEventListener {
     public void handlePostCreatedEvent(PostCreatedEvent event, Acknowledgment ack) {
         log.info("Received post-created-event: {}", event);
         notificationService.sendPostNotification(event.getPostId(), event.getAuthorId());
+        ack.acknowledge();
+    }
+
+    @KafkaListener(topics = "${topic.post-removed}", groupId = "notification-group")
+    public void handlePostRemovedEvent(PostRemovedEvent event, Acknowledgment ack) {
+        log.info("Received post-removed-event: {}", event);
+        notificationService.deleteNotificationsForEntity(event.getPostId(), NotificationType.POST);
         ack.acknowledge();
     }
 }

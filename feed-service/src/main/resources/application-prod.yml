@@ -38,6 +38,7 @@ topic:
   post-created: post-created-event
   post-removed: post-removed-event
   subscription-created: subscription-created-event
+  subscription-removed: subscription-removed-event
 
 eureka:
   client:

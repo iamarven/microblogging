@@ -1,6 +1,8 @@
 package com.merfonteen.notificationservice.kafkaListener;
 
+import com.merfonteen.notificationservice.dto.event.LikeRemovedEvent;
 import com.merfonteen.notificationservice.dto.event.LikeSentEvent;
+import com.merfonteen.notificationservice.model.enums.NotificationType;
 import com.merfonteen.notificationservice.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +21,13 @@ public class LikeEventListener {
     public void handleLikeSentEvent(LikeSentEvent event, Acknowledgment ack) {
         log.info("Received like-sent-event: {}", event);
         notificationService.sendLikeNotification(event.getUserId(), event.getLikeId(), event.getPostId());
+        ack.acknowledge();
+    }
+
+    @KafkaListener(topics = "${topic.like-removed}", groupId = "notification-group")
+    public void handleLikeRemovedEvent(LikeRemovedEvent event, Acknowledgment ack) {
+        log.info("Received like-removed-event: {}", event);
+        notificationService.deleteNotificationsForEntity(event.getLikeId(), NotificationType.LIKE);
         ack.acknowledge();
     }
 }

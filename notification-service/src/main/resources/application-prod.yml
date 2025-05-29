@@ -21,7 +21,7 @@ spring:
         order_updates: true
         order_inserts: true
   flyway:
-    schemas: like_service
+    schemas: notification_service
     baseline-on-migrate: true
     locations: classpath:db/migration
   data:
@@ -41,8 +41,11 @@ spring:
 
 topic:
   like-sent: like-sent-event
+  like-removed: like-removed-event
   post-created: post-created-event
+  post-removed: post-removed-event
   subscription-created: subscription-created-event
+  subscription-removed: subscription-removed-event
 
 eureka:
   client:

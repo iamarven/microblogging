@@ -127,6 +127,13 @@ public class NotificationServiceImpl implements NotificationService {
         return notificationMapper.toDto(notificationToDelete.get());
     }
 
+    @Override
+    @Transactional
+    public void deleteNotificationsForEntity(Long entityId, NotificationType type) {
+        log.info("Deleting all notifications for entity with id '{}' and type: {}", entityId, type);
+        notificationRepository.deleteByEntityIdAndType(entityId, type);
+    }
+
     @Transactional
     @Override
     public void sendLikeNotification(Long senderId, Long likeId, Long postId) {

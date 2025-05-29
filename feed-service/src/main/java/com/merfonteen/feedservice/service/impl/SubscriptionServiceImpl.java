@@ -3,6 +3,7 @@ package com.merfonteen.feedservice.service.impl;
 import com.merfonteen.feedservice.client.UserClient;
 import com.merfonteen.feedservice.dto.SubscriptionDto;
 import com.merfonteen.feedservice.dto.event.SubscriptionCreatedEvent;
+import com.merfonteen.feedservice.dto.event.SubscriptionRemovedEvent;
 import com.merfonteen.feedservice.exception.BadRequestException;
 import com.merfonteen.feedservice.exception.NotFoundException;
 import com.merfonteen.feedservice.kafka.eventProducer.SubscriptionEventProducer;
@@ -88,8 +89,12 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     public SubscriptionDto unfollow(Long targetUserId, Long currentUserId) {
         checkUserExistsOrThrowException(targetUserId);
         Subscription subscriptionToDelete = findSubscriptionByFollowerIdAndFolloweeIdOrThrowException(targetUserId, currentUserId);
+
         subscriptionRepository.delete(subscriptionToDelete);
         log.info("Subscription was successfully deleted: {}", subscriptionToDelete);
+
+        subscriptionEventProducer.sendSubscriptionRemovedEvent(new SubscriptionRemovedEvent(targetUserId));
+
         return subscriptionMapper.toDto(subscriptionToDelete);
     }
 
