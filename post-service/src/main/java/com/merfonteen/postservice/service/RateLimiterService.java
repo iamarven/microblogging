@@ -1,6 +1,6 @@
 package com.merfonteen.postservice.service;
 
-import com.merfonteen.postservice.exception.TooManyRequestsException;
+import com.merfonteen.exceptions.TooManyRequestsException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;

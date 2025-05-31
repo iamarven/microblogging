@@ -1,7 +1,7 @@
 package com.merfonteen.feedservice.kafka.eventProducer;
 
-import com.merfonteen.feedservice.dto.event.SubscriptionCreatedEvent;
-import com.merfonteen.feedservice.dto.event.SubscriptionRemovedEvent;
+import com.merfonteen.kafkaEvents.SubscriptionCreatedEvent;
+import com.merfonteen.kafkaEvents.SubscriptionRemovedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

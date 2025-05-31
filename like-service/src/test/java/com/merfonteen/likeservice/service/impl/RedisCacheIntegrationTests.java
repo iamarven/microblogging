@@ -28,6 +28,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.Instant;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.doNothing;
@@ -137,9 +138,11 @@ public class RedisCacheIntegrationTests {
     }
 
     private Like getSavedLike() {
+        long postId = ThreadLocalRandom.current().nextLong(1000, 9999);
+        long userId = ThreadLocalRandom.current().nextLong(1000, 9999);
         return likeRepository.save(Like.builder()
-                .userId(100L)
-                .postId(5L)
+                .userId(userId)
+                .postId(postId)
                 .createdAt(Instant.now())
                 .build());
     }

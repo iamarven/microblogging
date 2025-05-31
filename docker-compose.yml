@@ -147,6 +147,41 @@ services:
     networks:
       - app-net
 
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://notification-db:5432/notification_service_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      - eureka-server
+      - api-gateway
+      - notification-db
+      - kafka
+    networks:
+      - app-net
+
+  notification-db:
+    image: postgres:15-alpine
+    container_name: notification-db
+    environment:
+      POSTGRES_DB: notification_service_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5437:5432"
+    volumes:
+      - notification-db-data:/var/lib/postgresql/data
+    networks:
+      - app-net
+
   redis:
     image: redis:7.2.4
     container_name: redis
@@ -209,6 +244,7 @@ volumes:
   post-db-data:
   feed-db-data:
   like-db-data:
+  notification-db-data:
 
 networks:
   app-net:

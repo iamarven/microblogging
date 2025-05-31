@@ -1,7 +1,7 @@
 package com.merfonteen.notificationservice.kafkaListener;
 
-import com.merfonteen.notificationservice.dto.event.SubscriptionCreatedEvent;
-import com.merfonteen.notificationservice.dto.event.SubscriptionRemovedEvent;
+import com.merfonteen.kafkaEvents.SubscriptionCreatedEvent;
+import com.merfonteen.kafkaEvents.SubscriptionRemovedEvent;
 import com.merfonteen.notificationservice.model.enums.NotificationType;
 import com.merfonteen.notificationservice.service.NotificationService;
 import lombok.RequiredArgsConstructor;

@@ -1,17 +1,17 @@
 package com.merfonteen.notificationservice.service.impl;
 
+import com.merfonteen.exceptions.BadRequestException;
+import com.merfonteen.exceptions.NotFoundException;
 import com.merfonteen.notificationservice.client.FeedClient;
+import com.merfonteen.notificationservice.client.PostClient;
 import com.merfonteen.notificationservice.dto.NotificationDto;
 import com.merfonteen.notificationservice.dto.NotificationsPageDto;
 import com.merfonteen.notificationservice.dto.SubscriptionDto;
-import com.merfonteen.notificationservice.exception.BadRequestException;
 import com.merfonteen.notificationservice.mapper.NotificationMapper;
-import com.merfonteen.notificationservice.model.enums.NotificationFilter;
-import com.merfonteen.notificationservice.repository.NotificationRepository;
-import com.merfonteen.notificationservice.client.PostClient;
-import com.merfonteen.notificationservice.exception.NotFoundException;
 import com.merfonteen.notificationservice.model.Notification;
+import com.merfonteen.notificationservice.model.enums.NotificationFilter;
 import com.merfonteen.notificationservice.model.enums.NotificationType;
+import com.merfonteen.notificationservice.repository.NotificationRepository;
 import com.merfonteen.notificationservice.service.NotificationService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;

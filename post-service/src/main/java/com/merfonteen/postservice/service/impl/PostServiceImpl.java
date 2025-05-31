@@ -1,10 +1,13 @@
 package com.merfonteen.postservice.service.impl;
 
+import com.merfonteen.exceptions.NotFoundException;
+import com.merfonteen.kafkaEvents.PostCreatedEvent;
+import com.merfonteen.kafkaEvents.PostRemovedEvent;
 import com.merfonteen.postservice.client.UserClient;
-import com.merfonteen.postservice.dto.*;
-import com.merfonteen.postservice.dto.event.PostCreatedEvent;
-import com.merfonteen.postservice.dto.event.PostRemovedEvent;
-import com.merfonteen.postservice.exception.NotFoundException;
+import com.merfonteen.postservice.dto.PostCreateDto;
+import com.merfonteen.postservice.dto.PostResponseDto;
+import com.merfonteen.postservice.dto.PostUpdateDto;
+import com.merfonteen.postservice.dto.UserPostsPageResponseDto;
 import com.merfonteen.postservice.kafkaProducer.PostEventProducer;
 import com.merfonteen.postservice.mapper.PostMapper;
 import com.merfonteen.postservice.model.Post;

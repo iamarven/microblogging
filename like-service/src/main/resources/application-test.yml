@@ -22,6 +22,11 @@ spring:
       host: localhost
       port: 6379
 
+topic:
+  like-sent: like-sent-event
+  like-removed: like-removed-event
+  post-removed: post-removed-event
+
 eureka:
   client:
     enabled: false

@@ -1,7 +1,7 @@
 package com.merfonteen.postservice.kafkaProducer;
 
-import com.merfonteen.postservice.dto.event.PostCreatedEvent;
-import com.merfonteen.postservice.dto.event.PostRemovedEvent;
+import com.merfonteen.kafkaEvents.PostCreatedEvent;
+import com.merfonteen.kafkaEvents.PostRemovedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

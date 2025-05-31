@@ -1,13 +1,13 @@
 package com.merfonteen.feedservice.service.impl;
 
+import com.merfonteen.exceptions.BadRequestException;
+import com.merfonteen.exceptions.NotFoundException;
 import com.merfonteen.feedservice.client.UserClient;
 import com.merfonteen.feedservice.dto.SubscriptionDto;
-import com.merfonteen.feedservice.exception.BadRequestException;
-import com.merfonteen.feedservice.exception.NotFoundException;
+import com.merfonteen.feedservice.kafka.eventProducer.SubscriptionEventProducer;
 import com.merfonteen.feedservice.mapper.SubscriptionMapper;
 import com.merfonteen.feedservice.model.Subscription;
 import com.merfonteen.feedservice.repository.SubscriptionRepository;
-import com.merfonteen.feedservice.service.SubscriptionService;
 import feign.FeignException;
 import feign.Request;
 import feign.Response;
@@ -23,7 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,6 +38,9 @@ class SubscriptionServiceImplTest {
 
     @Mock
     private SubscriptionRepository subscriptionRepository;
+
+    @Mock
+    private SubscriptionEventProducer subscriptionEventProducer;
 
     @InjectMocks
     private SubscriptionServiceImpl subscriptionService;

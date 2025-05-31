@@ -1,8 +1,8 @@
 package com.merfonteen.feedservice.service;
 
 import com.merfonteen.feedservice.dto.FeedPageResponseDto;
-import com.merfonteen.feedservice.dto.event.PostCreatedEvent;
-import com.merfonteen.feedservice.dto.event.PostRemovedEvent;
+import com.merfonteen.kafkaEvents.PostCreatedEvent;
+import com.merfonteen.kafkaEvents.PostRemovedEvent;
 
 public interface FeedService {
     FeedPageResponseDto getMyFeed(Long currentUserId, int page, int size);

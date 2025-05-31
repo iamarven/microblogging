@@ -1,16 +1,16 @@
 package com.merfonteen.feedservice.service.impl;
 
+import com.merfonteen.exceptions.BadRequestException;
+import com.merfonteen.exceptions.NotFoundException;
 import com.merfonteen.feedservice.client.UserClient;
 import com.merfonteen.feedservice.dto.SubscriptionDto;
-import com.merfonteen.feedservice.dto.event.SubscriptionCreatedEvent;
-import com.merfonteen.feedservice.dto.event.SubscriptionRemovedEvent;
-import com.merfonteen.feedservice.exception.BadRequestException;
-import com.merfonteen.feedservice.exception.NotFoundException;
 import com.merfonteen.feedservice.kafka.eventProducer.SubscriptionEventProducer;
 import com.merfonteen.feedservice.mapper.SubscriptionMapper;
 import com.merfonteen.feedservice.model.Subscription;
 import com.merfonteen.feedservice.repository.SubscriptionRepository;
 import com.merfonteen.feedservice.service.SubscriptionService;
+import com.merfonteen.kafkaEvents.SubscriptionCreatedEvent;
+import com.merfonteen.kafkaEvents.SubscriptionRemovedEvent;
 import feign.FeignException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;

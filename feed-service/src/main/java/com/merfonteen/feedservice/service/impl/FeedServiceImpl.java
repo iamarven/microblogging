@@ -2,8 +2,6 @@ package com.merfonteen.feedservice.service.impl;
 
 import com.merfonteen.feedservice.dto.FeedDto;
 import com.merfonteen.feedservice.dto.FeedPageResponseDto;
-import com.merfonteen.feedservice.dto.event.PostCreatedEvent;
-import com.merfonteen.feedservice.dto.event.PostRemovedEvent;
 import com.merfonteen.feedservice.mapper.FeedMapper;
 import com.merfonteen.feedservice.model.Feed;
 import com.merfonteen.feedservice.model.Subscription;
@@ -11,6 +9,8 @@ import com.merfonteen.feedservice.repository.FeedRepository;
 import com.merfonteen.feedservice.repository.SubscriptionRepository;
 import com.merfonteen.feedservice.service.FeedCacheService;
 import com.merfonteen.feedservice.service.FeedService;
+import com.merfonteen.kafkaEvents.PostCreatedEvent;
+import com.merfonteen.kafkaEvents.PostRemovedEvent;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

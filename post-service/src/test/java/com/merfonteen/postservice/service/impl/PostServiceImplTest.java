@@ -1,13 +1,14 @@
 package com.merfonteen.postservice.service.impl;
 
+import com.merfonteen.exceptions.ForbiddenException;
+import com.merfonteen.exceptions.NotFoundException;
+import com.merfonteen.exceptions.TooManyRequestsException;
 import com.merfonteen.postservice.client.UserClient;
 import com.merfonteen.postservice.dto.PostCreateDto;
 import com.merfonteen.postservice.dto.PostResponseDto;
 import com.merfonteen.postservice.dto.PostUpdateDto;
 import com.merfonteen.postservice.dto.UserPostsPageResponseDto;
-import com.merfonteen.postservice.exception.ForbiddenException;
-import com.merfonteen.postservice.exception.NotFoundException;
-import com.merfonteen.postservice.exception.TooManyRequestsException;
+import com.merfonteen.postservice.kafkaProducer.PostEventProducer;
 import com.merfonteen.postservice.mapper.PostMapper;
 import com.merfonteen.postservice.model.Post;
 import com.merfonteen.postservice.model.enums.PostSortField;
@@ -24,6 +25,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -51,6 +54,15 @@ class PostServiceImplTest {
 
     @Mock
     private PostCacheService postCacheService;
+
+    @Mock
+    private StringRedisTemplate stringRedisTemplate;
+
+    @Mock
+    private PostEventProducer postEventProducer;
+
+    @Mock
+    private ValueOperations<String, String> valueOps;
 
     @InjectMocks
     private PostServiceImpl postService;
@@ -160,6 +172,7 @@ class PostServiceImplTest {
                 .createdAt(Instant.now())
                 .build();
 
+        when(stringRedisTemplate.opsForValue()).thenReturn(valueOps);
         when(postRepository.save(any(Post.class))).thenReturn(post);
         when(postMapper.toDto(any(Post.class))).thenReturn(postDto);
 

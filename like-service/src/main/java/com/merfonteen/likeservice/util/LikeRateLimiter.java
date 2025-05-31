@@ -1,9 +1,8 @@
 package com.merfonteen.likeservice.util;
 
-import com.merfonteen.likeservice.exception.TooManyRequestsException;
+import com.merfonteen.exceptions.TooManyRequestsException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 

@@ -1,13 +1,13 @@
 package com.merfonteen.likeservice.service.impl;
 
+import com.merfonteen.exceptions.BadRequestException;
+import com.merfonteen.exceptions.NotFoundException;
+import com.merfonteen.kafkaEvents.LikeRemovedEvent;
+import com.merfonteen.kafkaEvents.LikeSentEvent;
+import com.merfonteen.kafkaEvents.PostRemovedEvent;
 import com.merfonteen.likeservice.client.PostClient;
 import com.merfonteen.likeservice.dto.LikeDto;
 import com.merfonteen.likeservice.dto.LikePageResponseDto;
-import com.merfonteen.likeservice.dto.kafkaEvent.LikeRemovedEvent;
-import com.merfonteen.likeservice.dto.kafkaEvent.LikeSentEvent;
-import com.merfonteen.likeservice.dto.kafkaEvent.PostRemovedEvent;
-import com.merfonteen.likeservice.exception.BadRequestException;
-import com.merfonteen.likeservice.exception.NotFoundException;
 import com.merfonteen.likeservice.kafka.eventProducer.LikeEventProducer;
 import com.merfonteen.likeservice.mapper.LikeMapper;
 import com.merfonteen.likeservice.model.Like;

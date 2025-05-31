@@ -1,7 +1,7 @@
 package com.merfonteen.likeservice.kafka.eventProducer;
 
-import com.merfonteen.likeservice.dto.kafkaEvent.LikeRemovedEvent;
-import com.merfonteen.likeservice.dto.kafkaEvent.LikeSentEvent;
+import com.merfonteen.kafkaEvents.LikeRemovedEvent;
+import com.merfonteen.kafkaEvents.LikeSentEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
