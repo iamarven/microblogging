@@ -2,13 +2,13 @@ package com.merfonteen.feedservice.service.impl;
 
 import com.merfonteen.feedservice.dto.FeedDto;
 import com.merfonteen.feedservice.dto.FeedPageResponseDto;
-import com.merfonteen.feedservice.dto.event.PostCreatedEvent;
 import com.merfonteen.feedservice.mapper.FeedMapper;
 import com.merfonteen.feedservice.model.Feed;
 import com.merfonteen.feedservice.model.Subscription;
 import com.merfonteen.feedservice.repository.FeedRepository;
 import com.merfonteen.feedservice.repository.SubscriptionRepository;
 import com.merfonteen.feedservice.service.FeedCacheService;
+import com.merfonteen.kafkaEvents.PostCreatedEvent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -24,7 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
 

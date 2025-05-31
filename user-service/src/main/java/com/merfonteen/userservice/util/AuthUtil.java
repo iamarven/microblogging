@@ -1,6 +1,6 @@
 package com.merfonteen.userservice.util;
 
-import com.merfonteen.userservice.exception.ForbiddenException;
+import com.merfonteen.exceptions.ForbiddenException;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Objects;

@@ -1,11 +1,11 @@
 package com.merfonteen.userservice.service.impl;
 
+import com.merfonteen.exceptions.BadRequestException;
+import com.merfonteen.exceptions.ForbiddenException;
+import com.merfonteen.exceptions.NotFoundException;
 import com.merfonteen.userservice.dto.PublicUserDto;
 import com.merfonteen.userservice.dto.UserCreateDto;
 import com.merfonteen.userservice.dto.UserUpdateDto;
-import com.merfonteen.userservice.exception.BadRequestException;
-import com.merfonteen.userservice.exception.ForbiddenException;
-import com.merfonteen.userservice.exception.NotFoundException;
 import com.merfonteen.userservice.mapper.UserMapper;
 import com.merfonteen.userservice.model.User;
 import com.merfonteen.userservice.repository.UserRepository;

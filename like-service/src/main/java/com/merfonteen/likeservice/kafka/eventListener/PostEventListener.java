@@ -1,6 +1,6 @@
 package com.merfonteen.likeservice.kafka.eventListener;
 
-import com.merfonteen.likeservice.dto.kafkaEvent.PostRemovedEvent;
+import com.merfonteen.kafkaEvents.PostRemovedEvent;
 import com.merfonteen.likeservice.service.LikeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

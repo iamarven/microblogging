@@ -1,8 +1,8 @@
 package com.merfonteen.feedservice.kafka.eventListener;
 
-import com.merfonteen.feedservice.dto.event.PostCreatedEvent;
-import com.merfonteen.feedservice.dto.event.PostRemovedEvent;
 import com.merfonteen.feedservice.service.FeedService;
+import com.merfonteen.kafkaEvents.PostCreatedEvent;
+import com.merfonteen.kafkaEvents.PostRemovedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;

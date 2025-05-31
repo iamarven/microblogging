@@ -1,15 +1,14 @@
 package com.merfonteen.notificationservice.service.impl;
 
+import com.merfonteen.exceptions.BadRequestException;
+import com.merfonteen.exceptions.NotFoundException;
 import com.merfonteen.notificationservice.client.FeedClient;
 import com.merfonteen.notificationservice.client.PostClient;
 import com.merfonteen.notificationservice.dto.NotificationDto;
 import com.merfonteen.notificationservice.dto.NotificationsPageDto;
-import com.merfonteen.notificationservice.exception.BadRequestException;
-import com.merfonteen.notificationservice.exception.NotFoundException;
 import com.merfonteen.notificationservice.mapper.NotificationMapper;
 import com.merfonteen.notificationservice.model.Notification;
 import com.merfonteen.notificationservice.repository.NotificationRepository;
-import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

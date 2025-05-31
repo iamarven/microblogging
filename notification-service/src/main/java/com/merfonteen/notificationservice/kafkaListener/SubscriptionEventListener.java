@@ -20,7 +20,7 @@ public class SubscriptionEventListener {
     @KafkaListener(topics = "${topic.subscription-created}", groupId = "notification-group")
     public void handleSubscriptionCreatedEvent(SubscriptionCreatedEvent event, Acknowledgment ack) {
         log.info("Received subscription-created-event: {}", event);
-        notificationService.sendFollowNotification(event.getFollowerId(), event.getFollowerId(), event.getSubscriptionId());
+        notificationService.sendFollowNotification(event.getFollowerId(), event.getFolloweeId(), event.getSubscriptionId());
         ack.acknowledge();
     }
 
