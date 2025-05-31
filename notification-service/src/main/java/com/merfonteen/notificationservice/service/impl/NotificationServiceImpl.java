@@ -100,7 +100,8 @@ public class NotificationServiceImpl implements NotificationService {
 
         if(notification.isEmpty()) {
             log.warn("User '{}' tried to mark as read non-existing notification '{}'", currentUserId, notificationId);
-            throw new NotFoundException(String.format("Doesn't exist notification with id '%d' and user id '%d'",
+            throw new NotFoundException(
+                    String.format("Doesn't exist notification with id '%d' and user id '%d'",
                             notificationId, currentUserId));
         }
 

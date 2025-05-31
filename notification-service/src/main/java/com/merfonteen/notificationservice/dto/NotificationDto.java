@@ -19,5 +19,6 @@ public class NotificationDto {
     private Long entityId;
     private NotificationType type;
     private String message;
+    private Boolean isRead;
     private Instant createdAt;
 }
