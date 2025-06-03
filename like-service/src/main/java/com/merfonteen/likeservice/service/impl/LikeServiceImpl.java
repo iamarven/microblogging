@@ -97,8 +97,8 @@ public class LikeServiceImpl implements LikeService {
                 .createdAt(Instant.now())
                 .build();
 
-        likeRepository.save(newLike);
-        log.info("New like with id '{}' was saved to database successfully", newLike.getId());
+        Like savedLike = likeRepository.save(newLike);
+        log.info("New like with id '{}' was saved to database successfully", savedLike.getId());
 
         stringRedisTemplate.opsForValue().increment("like:count:post:" + postId);
 
@@ -111,7 +111,7 @@ public class LikeServiceImpl implements LikeService {
         likeEventProducer.sendLikeSentEvent(likeSentEvent);
         log.info("New message was sent to topic 'like-sent' successfully: {}", likeSentEvent);
 
-        return likeMapper.toDto(newLike);
+        return likeMapper.toDto(savedLike);
     }
 
     @Transactional

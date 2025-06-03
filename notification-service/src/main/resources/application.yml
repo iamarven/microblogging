@@ -49,4 +49,4 @@ eureka:
       defaultZone: http://eureka-server:8761/eureka
 
 post-service:
-  url: http://user-service:8081
+  url: http://post-service:8081

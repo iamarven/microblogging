@@ -5,6 +5,7 @@ services:
       context: ./user-service
       dockerfile: Dockerfile
     container_name: user-service
+    restart: always
     ports:
       - "8080:8080"
     environment:
@@ -14,7 +15,6 @@ services:
       SPRING_DATASOURCE_PASSWORD: postgres
     depends_on:
       - eureka-server
-      - api-gateway
       - user-db
     networks:
       - app-net
@@ -38,6 +38,7 @@ services:
       context: ./post-service
       dockerfile: Dockerfile
     container_name: post-service
+    restart: always
     ports:
       - "8081:8081"
     environment:
@@ -50,7 +51,6 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
       - eureka-server
-      - api-gateway
       - post-db
       - redis
       - kafka
@@ -76,6 +76,7 @@ services:
       context: ./feed-service
       dockerfile: Dockerfile
     container_name: feed-service
+    restart: always
     ports:
       - "8082:8082"
     environment:
@@ -88,7 +89,6 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
       - eureka-server
-      - api-gateway
       - feed-db
       - redis
       - kafka
@@ -114,6 +114,7 @@ services:
       context: ./like-service
       dockerfile: Dockerfile
     container_name: like-service
+    restart: always
     ports:
       - "8083:8083"
     environment:
@@ -126,7 +127,6 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
       - eureka-server
-      - api-gateway
       - like-db
       - redis
       - kafka
@@ -152,6 +152,7 @@ services:
       context: ./notification-service
       dockerfile: Dockerfile
     container_name: notification-service
+    restart: always
     ports:
       - "8084:8084"
     environment:
@@ -162,7 +163,6 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
       - eureka-server
-      - api-gateway
       - notification-db
       - kafka
     networks:
@@ -212,6 +212,11 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    healthcheck:
+      test: [ "CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - app-net
 
@@ -231,7 +236,7 @@ services:
       dockerfile: Dockerfile
     container_name: api-gateway
     ports:
-      - "8090:8090"
+      - "9000:9000"
     environment:
       EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka
     depends_on:

@@ -27,6 +27,7 @@ public class Notification {
     @Column(name = "entity_id", nullable = false)
     private Long entityId;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private NotificationType type;
 

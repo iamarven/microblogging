@@ -45,8 +45,7 @@ topic:
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka
-    enabled: false
+      defaultZone: http://eureka-server:8761/eureka
 
 post-service:
-  url: http://user-service:8081
+  url: http://post-service:8081

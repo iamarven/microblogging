@@ -51,9 +51,8 @@ eureka:
   client:
     service-url:
       defaultZone: http://eureka-server:8761/eureka
-    enabled: true
 
 post-service:
-  url: http://user-service:8081
+  url: http://post-service:8081
 feed-service:
   url: http://feed-service:8082
