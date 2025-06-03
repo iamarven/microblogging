@@ -21,6 +21,8 @@ public class GatewayRoutesConfig {
                         .uri("lb://like-service"))
                 .route("notification-service", r -> r.path("/api/notifications/**")
                         .uri("lb://notification-service"))
+                .route("comment-service", r -> r.path("/api/comments/**")
+                        .uri("lb://comment-service"))
                 .build();
     }
 }
