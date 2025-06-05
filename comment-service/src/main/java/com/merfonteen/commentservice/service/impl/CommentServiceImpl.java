@@ -12,8 +12,6 @@ import com.merfonteen.commentservice.repository.CommentRepository;
 import com.merfonteen.commentservice.service.CommentService;
 import com.merfonteen.commentservice.util.AuthUtil;
 import com.merfonteen.commentservice.util.CommentRateLimiter;
-import com.merfonteen.exceptions.BadRequestException;
-import com.merfonteen.exceptions.ForbiddenException;
 import com.merfonteen.exceptions.NotFoundException;
 import feign.FeignException;
 import jakarta.transaction.Transactional;
@@ -23,8 +21,10 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
@@ -39,6 +39,7 @@ public class CommentServiceImpl implements CommentService {
     private final CommentMapper commentMapper;
     private final CommentRepository commentRepository;
     private final CommentRateLimiter commentRateLimiter;
+    private final StringRedisTemplate stringRedisTemplate;
 
     @Override
     public CommentPageResponseDto getCommentsOnPost(Long postId, int page, int size, CommentSortField sortField) {
@@ -59,6 +60,21 @@ public class CommentServiceImpl implements CommentService {
                 .build();
     }
 
+    @Override
+    public Long getCommentCountForPost(Long postId) {
+        String cacheKey = "comment:count:post:" + postId;
+        String cacheValue = stringRedisTemplate.opsForValue().get(cacheKey);
+
+        if(cacheValue != null) {
+            return Long.parseLong(cacheValue);
+        }
+
+        long countFromDb = commentRepository.countAllByPostId(postId);
+        stringRedisTemplate.opsForValue().set(cacheKey, String.valueOf(countFromDb), Duration.ofMinutes(10));
+
+        return countFromDb;
+    }
+
     @Transactional
     @Override
     public CommentResponseDto createComment(CommentRequestDto requestDto, Long currentUserId) {
@@ -75,6 +91,8 @@ public class CommentServiceImpl implements CommentService {
 
         Comment savedComment = commentRepository.save(comment);
         log.info("Comment '{}' saved to database successfully", savedComment.getId());
+
+        stringRedisTemplate.opsForValue().increment("comment:count:post:" + savedComment.getPostId());
 
         return commentMapper.toDto(savedComment);
     }
@@ -103,6 +121,8 @@ public class CommentServiceImpl implements CommentService {
 
         commentRepository.delete(comment);
         log.info("User '{}' deleted comment '{}'", currentUserId, commentId);
+
+        stringRedisTemplate.opsForValue().decrement("comment:count:post:" + comment.getPostId());
 
         return commentMapper.toDto(comment);
     }

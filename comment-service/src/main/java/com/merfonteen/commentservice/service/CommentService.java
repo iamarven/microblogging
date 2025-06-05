@@ -8,6 +8,7 @@ import com.merfonteen.commentservice.model.enums.CommentSortField;
 
 public interface CommentService {
     CommentPageResponseDto getCommentsOnPost(Long postId, int page, int size, CommentSortField sortField);
+    Long getCommentCountForPost(Long postId);
     CommentResponseDto createComment(CommentRequestDto requestDto, Long currentUserId);
     CommentResponseDto updateComment(Long commentId, CommentUpdateDto updateDto, Long currentUserId);
     CommentResponseDto deleteComment(Long commentId, Long currentUserId);

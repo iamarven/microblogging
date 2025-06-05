@@ -33,6 +33,10 @@ public class CommentController {
         return ResponseEntity.ok(commentService.getCommentsOnPost(postId, page, size, sortField));
     }
 
+    @GetMapping("/posts/{id}/count")
+    public ResponseEntity<Long> getCommentCountForPost(@PathVariable("id") Long postId) {
+        return ResponseEntity.ok(commentService.getCommentCountForPost(postId));
+    }
 
     @PostMapping
     public ResponseEntity<CommentResponseDto> createComment(@RequestBody @Valid CommentRequestDto requestDto,
