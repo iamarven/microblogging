@@ -33,6 +33,7 @@ public class CommentController {
         return ResponseEntity.ok(commentService.getCommentsOnPost(postId, page, size, sortField));
     }
 
+
     @PostMapping
     public ResponseEntity<CommentResponseDto> createComment(@RequestBody @Valid CommentRequestDto requestDto,
                                                             @RequestHeader(name = "X-User-Id") Long currentUserId) {

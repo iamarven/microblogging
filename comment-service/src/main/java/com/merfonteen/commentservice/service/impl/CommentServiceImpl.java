@@ -11,6 +11,7 @@ import com.merfonteen.commentservice.model.enums.CommentSortField;
 import com.merfonteen.commentservice.repository.CommentRepository;
 import com.merfonteen.commentservice.service.CommentService;
 import com.merfonteen.commentservice.util.AuthUtil;
+import com.merfonteen.commentservice.util.CommentRateLimiter;
 import com.merfonteen.exceptions.BadRequestException;
 import com.merfonteen.exceptions.ForbiddenException;
 import com.merfonteen.exceptions.NotFoundException;
@@ -37,6 +38,7 @@ public class CommentServiceImpl implements CommentService {
     private final PostClient postClient;
     private final CommentMapper commentMapper;
     private final CommentRepository commentRepository;
+    private final CommentRateLimiter commentRateLimiter;
 
     @Override
     public CommentPageResponseDto getCommentsOnPost(Long postId, int page, int size, CommentSortField sortField) {
@@ -68,6 +70,8 @@ public class CommentServiceImpl implements CommentService {
                 .content(requestDto.getContent())
                 .createdAt(Instant.now())
                 .build();
+
+        commentRateLimiter.limitLeavingComments(currentUserId);
 
         Comment savedComment = commentRepository.save(comment);
         log.info("Comment '{}' saved to database successfully", savedComment.getId());
