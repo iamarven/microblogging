@@ -4,11 +4,15 @@ import com.merfonteen.commentservice.client.PostClient;
 import com.merfonteen.commentservice.dto.CommentPageResponseDto;
 import com.merfonteen.commentservice.dto.CommentRequestDto;
 import com.merfonteen.commentservice.dto.CommentResponseDto;
+import com.merfonteen.commentservice.dto.CommentUpdateDto;
 import com.merfonteen.commentservice.mapper.CommentMapper;
 import com.merfonteen.commentservice.model.Comment;
 import com.merfonteen.commentservice.model.enums.CommentSortField;
 import com.merfonteen.commentservice.repository.CommentRepository;
 import com.merfonteen.commentservice.service.CommentService;
+import com.merfonteen.commentservice.util.AuthUtil;
+import com.merfonteen.exceptions.BadRequestException;
+import com.merfonteen.exceptions.ForbiddenException;
 import com.merfonteen.exceptions.NotFoundException;
 import feign.FeignException;
 import jakarta.transaction.Transactional;
@@ -28,6 +32,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Service
 public class CommentServiceImpl implements CommentService {
+
 
     private final PostClient postClient;
     private final CommentMapper commentMapper;
@@ -68,6 +73,39 @@ public class CommentServiceImpl implements CommentService {
         log.info("Comment '{}' saved to database successfully", savedComment.getId());
 
         return commentMapper.toDto(savedComment);
+    }
+
+    @Transactional
+    @Override
+    public CommentResponseDto updateComment(Long commentId, CommentUpdateDto updateDto, Long currentUserId) {
+        Comment commentToUpdate = findCommentByIdOrThrowException(commentId);
+
+        AuthUtil.validateChangingComment(currentUserId, commentToUpdate.getUserId());
+
+        commentToUpdate.setContent(updateDto.getContent());
+        commentToUpdate.setUpdatedAt(Instant.now());
+
+        Comment savedComment = commentRepository.save(commentToUpdate);
+        log.info("Comment '{}' was successfully updated", savedComment.getId());
+
+        return commentMapper.toDto(savedComment);
+    }
+
+    @Transactional
+    @Override
+    public CommentResponseDto deleteComment(Long commentId, Long currentUserId) {
+        Comment comment = findCommentByIdOrThrowException(commentId);
+        AuthUtil.validateChangingComment(currentUserId, comment.getUserId());
+
+        commentRepository.delete(comment);
+        log.info("User '{}' deleted comment '{}'", currentUserId, commentId);
+
+        return commentMapper.toDto(comment);
+    }
+
+    private Comment findCommentByIdOrThrowException(Long commentId) {
+        return commentRepository.findById(commentId)
+                .orElseThrow(() -> new NotFoundException(String.format("There was not found comment '%d'", commentId)));
     }
 
     private void checkPostExistsOrThrowException(Long postId) {

@@ -3,6 +3,7 @@ package com.merfonteen.commentservice.controller;
 import com.merfonteen.commentservice.dto.CommentPageResponseDto;
 import com.merfonteen.commentservice.dto.CommentRequestDto;
 import com.merfonteen.commentservice.dto.CommentResponseDto;
+import com.merfonteen.commentservice.dto.CommentUpdateDto;
 import com.merfonteen.commentservice.model.enums.CommentSortField;
 import com.merfonteen.commentservice.service.CommentService;
 import jakarta.validation.Valid;
@@ -19,7 +20,7 @@ public class CommentController {
 
     private final CommentService commentService;
 
-    @GetMapping("/{id}")
+    @GetMapping("/posts/{id}")
     public ResponseEntity<CommentPageResponseDto> getCommentsOnPost(@PathVariable("id")
                                                                     Long postId,
                                                                     @RequestParam(required = false, defaultValue = "0")
@@ -33,10 +34,23 @@ public class CommentController {
     }
 
     @PostMapping
-    public ResponseEntity<CommentResponseDto> createComment(@Valid @RequestBody CommentRequestDto requestDto,
+    public ResponseEntity<CommentResponseDto> createComment(@RequestBody @Valid CommentRequestDto requestDto,
                                                             @RequestHeader(name = "X-User-Id") Long currentUserId) {
         CommentResponseDto comment = commentService.createComment(requestDto, currentUserId);
         URI location = URI.create("/api/comments/" + comment.getId());
         return ResponseEntity.created(location).body(comment);
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<CommentResponseDto> updateComment(@PathVariable("id") Long commentId,
+                                                            @RequestBody @Valid CommentUpdateDto updateDto,
+                                                            @RequestHeader(name = "X-User-Id") Long currentUserId) {
+        return ResponseEntity.ok(commentService.updateComment(commentId, updateDto, currentUserId));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<CommentResponseDto> deleteComment(@PathVariable("id") Long commentId,
+                                                            @RequestHeader(name = "X-User-Id") Long currentUserId) {
+        return ResponseEntity.ok(commentService.deleteComment(commentId, currentUserId));
     }
 }
