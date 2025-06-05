@@ -1,6 +1,7 @@
 CREATE SCHEMA IF NOT EXISTS user_service;
 
-CREATE TABLE IF NOT EXISTS user_service.users (
+CREATE TABLE IF NOT EXISTS user_service.users
+(
     id BIGSERIAL PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
     email VARCHAR(100) NOT NULL UNIQUE,

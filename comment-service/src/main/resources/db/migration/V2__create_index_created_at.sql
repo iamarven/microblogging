@@ -1,0 +1,1 @@
+CREATE INDEX idx_comments_created_at ON comment_service.comments (created_at)
