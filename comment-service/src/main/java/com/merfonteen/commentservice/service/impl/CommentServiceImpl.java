@@ -16,6 +16,7 @@ import com.merfonteen.commentservice.util.CommentRateLimiter;
 import com.merfonteen.commentservice.util.RedisCacheCleaner;
 import com.merfonteen.exceptions.NotFoundException;
 import com.merfonteen.kafkaEvents.CommentCreatedEvent;
+import com.merfonteen.kafkaEvents.CommentRemovedEvent;
 import com.merfonteen.kafkaEvents.PostRemovedEvent;
 import feign.FeignException;
 import jakarta.transaction.Transactional;
@@ -140,6 +141,14 @@ public class CommentServiceImpl implements CommentService {
 
         commentRepository.delete(comment);
         log.info("User '{}' deleted comment '{}'", currentUserId, commentId);
+
+        CommentRemovedEvent commentRemovedEvent = CommentRemovedEvent.builder()
+                .commentId(commentId)
+                .userId(currentUserId)
+                .postId(comment.getPostId())
+                .build();
+
+        commentEventProducer.sendCommentRemovedEvent(commentRemovedEvent);
 
         redisCacheCleaner.evictCommentCacheOnPostByPostId(comment.getPostId());
         stringRedisTemplate.opsForValue().decrement("comment:count:post:" + comment.getPostId());

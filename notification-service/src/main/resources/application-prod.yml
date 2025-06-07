@@ -47,6 +47,7 @@ topic:
   subscription-created: subscription-created-event
   subscription-removed: subscription-removed-event
   comment-created: comment-created-event
+  comment-removed: comment-removed-event
 
 eureka:
   client:

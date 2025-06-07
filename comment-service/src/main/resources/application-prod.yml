@@ -37,7 +37,8 @@ spring:
 
 topic:
   comment-created: comment-created-event
-  post-removed: post-removed=event
+  comment-removed: comment-removed-event
+  post-removed: post-removed-event
 
 eureka:
   client:
