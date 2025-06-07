@@ -5,9 +5,7 @@ import org.springframework.stereotype.Component;
 
 public class AuthUtil {
 
-    private AuthUtil() {
-
-    }
+    private AuthUtil() {}
 
     public static void validateChangingComment(Long currentUserId, Long commentUserId) {
         if(!commentUserId.equals(currentUserId)) {
