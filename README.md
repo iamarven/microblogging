@@ -7,7 +7,7 @@ A microservices application. A mini-social network with basic functionality: cre
 ## Tech stack
 
 - **Java 21**
-- **Spring Boot 3.x.x**
+- **Spring Boot 3**
   - Web
   - Data
 - **Hibernate**
@@ -117,3 +117,27 @@ Uploading/storing media files.
 
 **Common-lib:**  
 It's not a microservice. It contains common classes such as kafka events and exceptions.
+
+---
+
+## How to run  
+
+**Requirements:**
+- Java 21
+- Maven
+- Docker & Docker Compose
+
+1. **Clone the repository**
+   ```bash
+    htpps://github.com/merfonteen/microblogging.git
+    cd microblogging
+   ````
+2. **Build all microservices:**
+   ````bash
+     mvn clean package -DskipTests
+   ````
+
+3. **Run the project in Docker:**
+   ````bash
+     docker-compose up --build
+   ````
