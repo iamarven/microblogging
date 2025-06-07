@@ -37,7 +37,7 @@ public class LikeRateLimiter {
 
         if(count > MAX_LIKES) {
             log.warn("Too many likes per {}s for user '{}'", DURATION.getSeconds(), userId);
-            throw new TooManyRequestsException("You have exceed the allowed number of " + actionLabel + "s");
+            throw new TooManyRequestsException("You have exceeded the allowed number of " + actionLabel + "s");
         }
     }
 }

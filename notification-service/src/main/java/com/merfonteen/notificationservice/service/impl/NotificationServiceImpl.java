@@ -67,7 +67,7 @@ public class NotificationServiceImpl implements NotificationService {
         }
 
         notificationRepository.saveAll(userNotifications);
-        stringRedisTemplate.opsForValue().set("user:notifications:count:" + currentUserId, "0");
+        stringRedisTemplate.opsForValue().set("user:notifications:unread:count:" + currentUserId, "0");
 
         return NotificationsPageDto.builder()
                 .notifications(notificationDtos)
@@ -128,8 +128,8 @@ public class NotificationServiceImpl implements NotificationService {
         return notificationMapper.toDto(notificationToDelete.get());
     }
 
-    @Override
     @Transactional
+    @Override
     public void deleteNotificationsForEntity(Long entityId, NotificationType type) {
         log.info("Deleting all notifications for entity with id '{}' and type: {}", entityId, type);
         notificationRepository.deleteByEntityIdAndType(entityId, type);
@@ -194,6 +194,7 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
+    @Transactional
     @Override
     public void sendFollowNotification(Long followerId, Long followeeId, Long subscriptionId) {
         Notification notification = Notification.builder()
@@ -207,6 +208,25 @@ public class NotificationServiceImpl implements NotificationService {
                 .build();
 
         stringRedisTemplate.opsForValue().increment("user:notifications:unread:count:" + followeeId);
+        notificationRepository.save(notification);
+    }
+
+    @Override
+    public void sendCommentNotification(Long commentId, Long postId, Long leftCommentUserId) {
+        Long postAuthorId = postClient.getPostAuthorId(postId);
+        Notification notification = Notification.builder()
+                .senderId(leftCommentUserId)
+                .receiverId(postAuthorId)
+                .entityId(commentId)
+                .type(NotificationType.COMMENT)
+                .message(String.format("User with id '%d' has just left comment '%d' to post with id '%d'",
+                        leftCommentUserId, commentId, postId)
+                )
+                .isRead(false)
+                .createdAt(Instant.now())
+                .build();
+
+        stringRedisTemplate.opsForValue().increment("user:notifications:unread:count:" + postAuthorId);
         notificationRepository.save(notification);
     }
 

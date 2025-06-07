@@ -193,14 +193,14 @@ class PostServiceImplTest {
                 .content("content")
                 .build();
 
-        doThrow(new TooManyRequestsException("You have exceed the allowed number of posts per minute"))
+        doThrow(new TooManyRequestsException("You have exceeded the allowed number of posts per minute"))
                 .when(rateLimiterService)
                 .validatePostCreationLimit(currentUserId);
 
         Exception exception = assertThrows(TooManyRequestsException.class,
                 () -> postService.createPost(currentUserId, postCreateDto));
 
-        assertEquals("You have exceed the allowed number of posts per minute", exception.getMessage());
+        assertEquals("You have exceeded the allowed number of posts per minute", exception.getMessage());
         verify(postRepository, never()).save(any(Post.class));
     }
 

@@ -6,13 +6,14 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
 import java.util.List;
 
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class CommentPageResponseDto {
+public class CommentPageResponseDto implements Serializable {
     List<CommentResponseDto> commentDtos;
     @JsonProperty("current_page")
     private Integer currentPage;

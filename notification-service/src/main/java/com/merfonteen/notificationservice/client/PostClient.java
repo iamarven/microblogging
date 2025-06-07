@@ -8,5 +8,5 @@ import org.springframework.web.bind.annotation.PathVariable;
 public interface PostClient {
 
     @GetMapping("/api/posts/{id}/author-id")
-    Long getPostAuthorId(@PathVariable("id") Long id);
+    Long getPostAuthorId(@PathVariable("id") Long postId);
 }

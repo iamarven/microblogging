@@ -13,4 +13,5 @@ public interface NotificationService {
     void sendLikeNotification(Long senderId, Long likeId, Long postId);
     void sendPostNotification(Long postId, Long authorId);
     void sendFollowNotification(Long followerId, Long followeeId, Long subscriptionId);
+    void sendCommentNotification(Long commentId, Long postId, Long leftCommentUserId);
 }

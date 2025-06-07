@@ -25,7 +25,7 @@ public class RateLimiterService {
         }
 
         if(currentCount > POST_LIMIT) {
-            throw new TooManyRequestsException("You have exceed the allowed number of posts per minute");
+            throw new TooManyRequestsException("You have exceeded the allowed number of posts per minute");
         }
     }
 }

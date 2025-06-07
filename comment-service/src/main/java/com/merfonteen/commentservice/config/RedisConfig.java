@@ -1,4 +1,4 @@
-package com.merfonteen.feedservice.config;
+package com.merfonteen.commentservice.config;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;

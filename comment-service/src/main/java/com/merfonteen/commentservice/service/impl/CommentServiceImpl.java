@@ -5,6 +5,7 @@ import com.merfonteen.commentservice.dto.CommentPageResponseDto;
 import com.merfonteen.commentservice.dto.CommentRequestDto;
 import com.merfonteen.commentservice.dto.CommentResponseDto;
 import com.merfonteen.commentservice.dto.CommentUpdateDto;
+import com.merfonteen.commentservice.kafka.eventProducer.CommentEventProducer;
 import com.merfonteen.commentservice.mapper.CommentMapper;
 import com.merfonteen.commentservice.model.Comment;
 import com.merfonteen.commentservice.model.enums.CommentSortField;
@@ -12,15 +13,19 @@ import com.merfonteen.commentservice.repository.CommentRepository;
 import com.merfonteen.commentservice.service.CommentService;
 import com.merfonteen.commentservice.util.AuthUtil;
 import com.merfonteen.commentservice.util.CommentRateLimiter;
+import com.merfonteen.commentservice.util.RedisCacheCleaner;
 import com.merfonteen.exceptions.NotFoundException;
+import com.merfonteen.kafkaEvents.CommentCreatedEvent;
 import feign.FeignException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.redis.cache.RedisCache;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -34,13 +39,15 @@ import java.util.List;
 @Service
 public class CommentServiceImpl implements CommentService {
 
-
     private final PostClient postClient;
     private final CommentMapper commentMapper;
     private final CommentRepository commentRepository;
+    private final RedisCacheCleaner redisCacheCleaner;
     private final CommentRateLimiter commentRateLimiter;
     private final StringRedisTemplate stringRedisTemplate;
+    private final CommentEventProducer commentEventProducer;
 
+    @Cacheable(value = "comments-by-postId", key = "#postId + ':' + #page + ':' + #size")
     @Override
     public CommentPageResponseDto getCommentsOnPost(Long postId, int page, int size, CommentSortField sortField) {
         if(size > 100) {
@@ -92,6 +99,15 @@ public class CommentServiceImpl implements CommentService {
         Comment savedComment = commentRepository.save(comment);
         log.info("Comment '{}' saved to database successfully", savedComment.getId());
 
+        CommentCreatedEvent commentCreatedEvent = CommentCreatedEvent.builder()
+                .commentId(savedComment.getId())
+                .userId(currentUserId)
+                .postId(requestDto.getPostId())
+                .build();
+
+        commentEventProducer.sendCommentCreatedEvent(commentCreatedEvent);
+
+        redisCacheCleaner.evictCommentCacheOnPostByPostId(requestDto.getPostId());
         stringRedisTemplate.opsForValue().increment("comment:count:post:" + savedComment.getPostId());
 
         return commentMapper.toDto(savedComment);
@@ -110,6 +126,8 @@ public class CommentServiceImpl implements CommentService {
         Comment savedComment = commentRepository.save(commentToUpdate);
         log.info("Comment '{}' was successfully updated", savedComment.getId());
 
+        redisCacheCleaner.evictCommentCacheOnPostByPostId(commentToUpdate.getPostId());
+
         return commentMapper.toDto(savedComment);
     }
 
@@ -122,6 +140,7 @@ public class CommentServiceImpl implements CommentService {
         commentRepository.delete(comment);
         log.info("User '{}' deleted comment '{}'", currentUserId, commentId);
 
+        redisCacheCleaner.evictCommentCacheOnPostByPostId(comment.getPostId());
         stringRedisTemplate.opsForValue().decrement("comment:count:post:" + comment.getPostId());
 
         return commentMapper.toDto(comment);

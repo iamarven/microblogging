@@ -109,7 +109,6 @@ public class LikeServiceImpl implements LikeService {
                 .build();
 
         likeEventProducer.sendLikeSentEvent(likeSentEvent);
-        log.info("New message was sent to topic 'like-sent' successfully: {}", likeSentEvent);
 
         return likeMapper.toDto(savedLike);
     }
