@@ -1,6 +1,6 @@
 # Microblogging App
 
-A microservices application. A mini-social network with basic functionality: creating posts, subscribing to users, likes/coments, creating a personal news feed
+A microservices application. A mini-social network with basic functionality: creating posts, subscribing to users, likes/coments, creating a personal news feed.
 
 ![schema_as_svg](https://github.com/user-attachments/assets/67d7f4a4-f42f-4088-a12b-e383b9bd1299)
 
@@ -96,6 +96,8 @@ Handles user actions related to comments on post.
   - Redis caching the comments for post and manually removing it on new comments.
   - Limits the number of comments per User via Redis(rate limiter).
   - Uses Redis to quickly count comments by postId.
+  - Uses Redis to quickly count replies on comment by parentId.
+  - Supports nested comments
   - Integration with Post Service for checking post exists.
 
 ---
