@@ -102,6 +102,21 @@ public class CommentServiceImpl implements CommentService {
                 .build();
     }
 
+    @Override
+    public Long getRepliesCountForComment(Long commentId) {
+        String cacheKey = "replies:count:comment:" + commentId;
+        String cachedValue = stringRedisTemplate.opsForValue().get(cacheKey);
+
+        if(cachedValue != null) {
+            return Long.parseLong(cachedValue);
+        }
+
+        long countFromDb = commentRepository.countAllByParentId(commentId);
+        stringRedisTemplate.opsForValue().set(cacheKey, String.valueOf(countFromDb), Duration.ofMinutes(10));
+
+        return countFromDb;
+    }
+
     @Transactional
     @Override
     public CommentResponseDto createComment(CommentRequestDto requestDto, Long currentUserId) {

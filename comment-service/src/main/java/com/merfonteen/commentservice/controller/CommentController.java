@@ -43,6 +43,11 @@ public class CommentController {
         return ResponseEntity.ok(commentService.getCommentCountForPost(postId));
     }
 
+    @GetMapping("/{id}/replies/count")
+    public ResponseEntity<Long> getRepliesCountForComment(@PathVariable("id") Long commentId) {
+
+    }
+
     @PostMapping
     public ResponseEntity<CommentResponseDto> createComment(@RequestBody @Valid CommentRequestDto requestDto,
                                                             @RequestHeader(name = "X-User-Id") Long currentUserId) {

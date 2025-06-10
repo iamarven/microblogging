@@ -8,6 +8,7 @@ public interface CommentService {
     CommentPageResponseDto getCommentsOnPost(Long postId, int page, int size, CommentSortField sortField);
     Long getCommentCountForPost(Long postId);
     CommentPageResponseDto getReplies(Long parentId, int page, int size);
+    Long getRepliesCountForComment(Long commentId);
     CommentResponseDto createComment(CommentRequestDto requestDto, Long currentUserId);
     CommentResponseDto createReply(CommentReplyRequestDto replyRequestDto, Long currentUserId);
     CommentResponseDto updateComment(Long commentId, CommentUpdateDto updateDto, Long currentUserId);
