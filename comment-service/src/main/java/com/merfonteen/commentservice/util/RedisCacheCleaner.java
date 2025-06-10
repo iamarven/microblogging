@@ -22,4 +22,13 @@ public class RedisCacheCleaner {
             log.info("Evicted {} cached pages for post '{}'", keys.size(), postId);
         }
     }
+
+    public void evictCommentRepliesCacheByParentId(Long parentId) {
+        String pattern = "comment-replies::" + parentId + ":*";
+        Set<String> keys = redisTemplate.keys(pattern);
+        if(keys != null && !keys.isEmpty()) {
+            redisTemplate.delete(keys);
+            log.info("Evicted {} cached pages for comment '{}'", keys.size(), parentId);
+        }
+    }
 }

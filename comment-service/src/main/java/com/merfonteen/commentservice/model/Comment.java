@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 @Setter
@@ -33,6 +35,23 @@ public class Comment {
 
     @Column(name = "updated_at")
     private Instant updatedAt;
+
+    @ManyToOne
+    @JoinColumn(name = "parent_id")
+    private Comment parent;
+
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<Comment> replies = new ArrayList<>();
+
+    public void addReply(Comment reply) {
+        reply.setParent(this);
+        this.replies.add(reply);
+    }
+
+    public boolean isRootComment() {
+        return parent == null;
+    }
 
     @Override
     public boolean equals(Object o) {

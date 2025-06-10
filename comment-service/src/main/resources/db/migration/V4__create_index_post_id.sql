@@ -1,1 +1,0 @@
-CREATE INDEX idx_comments_post_id ON comment_service.comments (post_id);

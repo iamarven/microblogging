@@ -1,10 +1,7 @@
 package com.merfonteen.commentservice.service.impl;
 
 import com.merfonteen.commentservice.client.PostClient;
-import com.merfonteen.commentservice.dto.CommentPageResponseDto;
-import com.merfonteen.commentservice.dto.CommentRequestDto;
-import com.merfonteen.commentservice.dto.CommentResponseDto;
-import com.merfonteen.commentservice.dto.CommentUpdateDto;
+import com.merfonteen.commentservice.dto.*;
 import com.merfonteen.commentservice.kafka.eventProducer.CommentEventProducer;
 import com.merfonteen.commentservice.mapper.CommentMapper;
 import com.merfonteen.commentservice.model.Comment;
@@ -27,7 +24,6 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.redis.cache.RedisCache;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -84,6 +80,28 @@ public class CommentServiceImpl implements CommentService {
         return countFromDb;
     }
 
+    @Cacheable(value = "comment-replies", key = "#parentId + ':' + #page + ':' + #size")
+    @Override
+    public CommentPageResponseDto getReplies(Long parentId, int page, int size) {
+        findCommentByIdOrThrowException(parentId);
+
+        if(size > 100) {
+            size = 100;
+        }
+
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Comment> replies = commentRepository.findAllByParentId(parentId, pageRequest);
+        List<CommentResponseDto> repliesPage = commentMapper.toDtos(replies.getContent());
+
+        return CommentPageResponseDto.builder()
+                .commentDtos(repliesPage)
+                .currentPage(replies.getNumber())
+                .totalPages(replies.getTotalPages())
+                .totalElements(replies.getTotalElements())
+                .isLastPage(replies.isLast())
+                .build();
+    }
+
     @Transactional
     @Override
     public CommentResponseDto createComment(CommentRequestDto requestDto, Long currentUserId) {
@@ -113,6 +131,31 @@ public class CommentServiceImpl implements CommentService {
         stringRedisTemplate.opsForValue().increment("comment:count:post:" + savedComment.getPostId());
 
         return commentMapper.toDto(savedComment);
+    }
+
+    @Transactional
+    @Override
+    public CommentResponseDto createReply(CommentReplyRequestDto replyRequestDto, Long currentUserId) {
+        Comment parent = findCommentByIdOrThrowException(replyRequestDto.getParentId());
+
+        Comment reply = Comment.builder()
+                .parent(parent)
+                .content(replyRequestDto.getContent())
+                .postId(parent.getPostId())
+                .userId(currentUserId)
+                .createdAt(Instant.now())
+                .build();
+
+        commentRateLimiter.limitLeavingComments(currentUserId);
+
+        Comment saved = commentRepository.save(reply);
+        log.info("Added nested comment '{}' to comment '{}'", saved.getId(), parent.getId());
+
+        redisCacheCleaner.evictCommentCacheOnPostByPostId(parent.getPostId());
+        redisCacheCleaner.evictCommentRepliesCacheByParentId(replyRequestDto.getParentId());
+        stringRedisTemplate.opsForValue().increment("comment:count:post:" + parent.getPostId());
+
+        return commentMapper.toDto(saved);
     }
 
     @Transactional
