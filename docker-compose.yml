@@ -147,6 +147,44 @@ services:
     networks:
       - app-net
 
+  comment-service:
+    build:
+      context: ./comment-service
+      dockerfile: Dockerfile
+    container_name: comment-service
+    restart: always
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://like-db:5432/comment_service_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      - eureka-server
+      - like-db
+      - redis
+      - kafka
+    networks:
+      - app-net
+
+  comment-db:
+    image: postgres:15-alpine
+    container_name: comment-db
+    environment:
+      POSTGRES_DB: comment_service_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5438:5432"
+    volumes:
+      - like-db-data:/var/lib/postgresql/data
+    networks:
+      - app-net
+
   notification-service:
     build:
       context: ./notification-service
@@ -250,6 +288,7 @@ volumes:
   feed-db-data:
   like-db-data:
   notification-db-data:
+  comment-db-data:
 
 networks:
   app-net:

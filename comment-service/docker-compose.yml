@@ -1,52 +1,51 @@
 services:
 
-  feed-service:
+  comment-service:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: feed-service
+    container_name: comment-service
     ports:
-      - "8082:8082"
+      - "8085:8085"
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/feed_service_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/comment_service_db
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
       - postgres
-      - redis
       - kafka
       - zookeeper
 
   postgres:
     image: postgres:15-alpine
-    container_name: feed-service-db
+    container_name: comment-service-db
     environment:
-      POSTGRES_DB: feed_service_db
+      POSTGRES_DB: comment_service_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
       - "5433:5432"
     volumes:
-      - feed-db-data:/var/lib/postgresql/data
+      - comment-db-data:/var/lib/postgresql/data
 
   redis:
     image: redis:7.2.4
-    container_name: feed-service-redis
+    container_name: comment-service-redis
     ports:
       - "6379:6379"
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.4.0
-    container_name: feed-service-zookeeper
+    container_name: comment-service-zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
 
   kafka:
     image: confluentinc/cp-kafka:7.4.0
-    container_name: feed-service-kafka
+    container_name: comment-service-kafka
     depends_on:
       - zookeeper
     ports:
@@ -58,4 +57,4 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
 volumes:
-  feed-db-data:
+  comment-db-data:
