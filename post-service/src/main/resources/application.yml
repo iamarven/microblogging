@@ -50,3 +50,6 @@ eureka:
 
 user-service:
   url: http://user-service:8080
+media-service:
+  url: http://media-service:8086
+

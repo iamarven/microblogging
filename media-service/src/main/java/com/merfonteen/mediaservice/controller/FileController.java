@@ -1,7 +1,7 @@
 package com.merfonteen.mediaservice.controller;
 
-import com.merfonteen.mediaservice.dto.FileUploadResponse;
-import com.merfonteen.mediaservice.dto.FileUrlResponse;
+import com.merfonteen.dtos.FileUploadResponse;
+import com.merfonteen.dtos.FileUrlResponse;
 import com.merfonteen.mediaservice.enums.FileType;
 import com.merfonteen.mediaservice.service.FileStorageService;
 import lombok.RequiredArgsConstructor;

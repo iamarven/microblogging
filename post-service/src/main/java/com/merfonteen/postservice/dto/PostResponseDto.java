@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.time.Instant;
+import java.util.List;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -18,7 +19,8 @@ public class PostResponseDto implements Serializable {
     @JsonProperty("author_id")
     private Long authorId;
     private String content;
-    private String mediaUrl;
+    @JsonProperty("media_urls")
+    private List<String> mediaUrls;
     @JsonProperty("created_at")
     private Instant createdAt;
     @JsonProperty("updated_at")

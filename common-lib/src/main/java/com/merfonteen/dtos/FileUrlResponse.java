@@ -1,4 +1,4 @@
-package com.merfonteen.mediaservice.dto;
+package com.merfonteen.dtos;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

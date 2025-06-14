@@ -117,7 +117,6 @@ public class PostServiceImpl implements PostService {
         Post post = Post.builder()
                 .authorId(currentUserId)
                 .content(createDto.getContent())
-                .mediaUrl(createDto.getMediaUrl())
                 .createdAt(Instant.now())
                 .build();
 
@@ -140,7 +139,6 @@ public class PostServiceImpl implements PostService {
         AuthUtil.requireSelfAccess(postToUpdate.getAuthorId(), currentUserId);
 
         Optional.ofNullable(updateDto.getContent()).ifPresent(postToUpdate::setContent);
-        Optional.ofNullable(updateDto.getMediaUrl()).ifPresent(postToUpdate::setMediaUrl);
         postToUpdate.setUpdatedAt(Instant.now());
 
         postRepository.save(postToUpdate);

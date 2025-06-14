@@ -11,6 +11,7 @@ import com.merfonteen.commentservice.service.CommentService;
 import com.merfonteen.commentservice.util.AuthUtil;
 import com.merfonteen.commentservice.util.CommentRateLimiter;
 import com.merfonteen.commentservice.util.RedisCacheCleaner;
+import com.merfonteen.dtos.FileUploadResponse;
 import com.merfonteen.exceptions.NotFoundException;
 import com.merfonteen.kafkaEvents.CommentCreatedEvent;
 import com.merfonteen.kafkaEvents.CommentRemovedEvent;
@@ -26,6 +27,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Duration;
 import java.time.Instant;

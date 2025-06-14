@@ -13,5 +13,4 @@ import lombok.NoArgsConstructor;
 public class PostUpdateDto {
     @Size(max = 5000)
     private String content;
-    private String mediaUrl;
 }

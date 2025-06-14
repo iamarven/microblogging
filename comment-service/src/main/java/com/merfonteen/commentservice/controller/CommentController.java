@@ -3,10 +3,12 @@ package com.merfonteen.commentservice.controller;
 import com.merfonteen.commentservice.dto.*;
 import com.merfonteen.commentservice.model.enums.CommentSortField;
 import com.merfonteen.commentservice.service.CommentService;
+import com.merfonteen.dtos.FileUploadResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URI;
 import java.util.List;
@@ -45,7 +47,7 @@ public class CommentController {
 
     @GetMapping("/{id}/replies/count")
     public ResponseEntity<Long> getRepliesCountForComment(@PathVariable("id") Long commentId) {
-
+        return ResponseEntity.ok(commentService.getRepliesCountForComment(commentId));
     }
 
     @PostMapping

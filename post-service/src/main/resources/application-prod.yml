@@ -1,3 +1,6 @@
+server:
+  port: 8081
+
 spring:
   application:
     name: post-service
@@ -42,5 +45,7 @@ eureka:
     service-url:
       defaultZone: http://eureka-server:8761/eureka
 
-server:
-  port: 8081
+user-service:
+  url: http://user-service:8080
+media-service:
+  url: http://media-service:8086

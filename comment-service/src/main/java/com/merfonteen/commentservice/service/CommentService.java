@@ -2,7 +2,10 @@ package com.merfonteen.commentservice.service;
 
 import com.merfonteen.commentservice.dto.*;
 import com.merfonteen.commentservice.model.enums.CommentSortField;
+import com.merfonteen.dtos.FileUploadResponse;
+import com.merfonteen.dtos.FileUrlResponse;
 import com.merfonteen.kafkaEvents.PostRemovedEvent;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface CommentService {
     CommentPageResponseDto getCommentsOnPost(Long postId, int page, int size, CommentSortField sortField);

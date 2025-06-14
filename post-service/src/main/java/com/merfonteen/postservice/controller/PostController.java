@@ -1,15 +1,19 @@
 package com.merfonteen.postservice.controller;
 
+import com.merfonteen.dtos.FileUploadResponse;
 import com.merfonteen.postservice.dto.PostCreateDto;
 import com.merfonteen.postservice.dto.PostResponseDto;
 import com.merfonteen.postservice.dto.PostUpdateDto;
 import com.merfonteen.postservice.dto.UserPostsPageResponseDto;
+import com.merfonteen.postservice.model.PostMedia;
 import com.merfonteen.postservice.model.enums.PostSortField;
+import com.merfonteen.postservice.service.PostMediaService;
 import com.merfonteen.postservice.service.PostService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URI;
 
@@ -17,10 +21,12 @@ import java.net.URI;
 @RestController
 public class PostController {
 
+    private final PostMediaService postMediaService;
     private final PostService postService;
 
-    public PostController(PostService postService) {
+    public PostController(PostService postService, PostMediaService postMediaService) {
         this.postService = postService;
+        this.postMediaService = postMediaService;
     }
 
     @GetMapping("/{id}")
@@ -53,6 +59,13 @@ public class PostController {
         PostResponseDto createdPost = postService.createPost(currentUserId, createDto);
         URI location = URI.create("/api/posts/" + createdPost.getId());
         return ResponseEntity.created(location).body(createdPost);
+    }
+
+    @PostMapping("/{id}/upload/media")
+    public ResponseEntity<FileUploadResponse> uploadPostMedia(@PathVariable("id") Long postId,
+                                                              @RequestParam(name = "file") MultipartFile file,
+                                                              @RequestHeader(name = "X-User-Id") Long currentUserId) {
+        return ResponseEntity.ok(postMediaService.uploadMediaToPost(postId, file, currentUserId));
     }
 
     @PatchMapping("/{id}")

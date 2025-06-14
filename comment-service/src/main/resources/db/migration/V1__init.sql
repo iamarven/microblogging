@@ -16,7 +16,7 @@ CREATE TABLE comment_service.comments
             ON DELETE CASCADE
 );
 
-CREATE INDEX idx_comments_post_id ON comment_service.comments(post_id);
-CREATE INDEX idx_comments_user_id ON comment_service.comments(user_id);
-CREATE INDEX idx_comments_parent_id ON comment_service.comments(parent_id);
-CREATE INDEX idx_comments_created_at ON comment_service.comments(created_at);
+CREATE INDEX idx_comments_post_id ON comment_service.comments (post_id);
+CREATE INDEX idx_comments_user_id ON comment_service.comments (user_id);
+CREATE INDEX idx_comments_parent_id ON comment_service.comments (parent_id);
+CREATE INDEX idx_comments_created_at ON comment_service.comments (created_at);
