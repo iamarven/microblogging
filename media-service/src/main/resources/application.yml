@@ -1,0 +1,26 @@
+server:
+  port: 8086
+
+minio:
+  url: http://localhost:8000
+  access-key: minioadmin
+  secret-key: minioadmin
+  posts-bucket: posts-media
+  profiles-bucket: profile-photos
+  max-file-size: 10485760
+  allowed-image-types:
+    - image/jpeg
+    - image/jpg
+    - image/png
+    - image/gif
+    - image/webp
+  allowed-video-types:
+    - video/mp4
+    - video/avi
+    - video/mov
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 50MB
