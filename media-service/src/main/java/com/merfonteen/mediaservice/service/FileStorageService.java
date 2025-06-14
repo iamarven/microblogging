@@ -39,6 +39,31 @@ public class FileStorageService {
         return uploadFile(file, bucket, fileName);
     }
 
+    public String uploadProfilePhoto(MultipartFile file, Long userId) {
+        validateImageFile(file);
+
+        String fileName = generateFileName(file, null, userId, "profile");
+        String bucketName = minioProperties.getProfilesBucket();
+
+        return uploadFile(file, bucketName, fileName);
+    }
+
+    public void deleteFile(String fileName, FileType fileType) {
+        try {
+            String bucketName = getBucketName(fileType);
+            minioClient.removeObject(
+                    RemoveObjectArgs.builder()
+                            .bucket(bucketName)
+                            .object(fileName)
+                            .build()
+            );
+            log.info("Deleted file: {}", fileName);
+        } catch (Exception e) {
+            log.error("Error deleting file: {}", fileName, e);
+            throw new FileStorageException("Failed to delete file: " + fileName);
+        }
+    }
+
     public String getFileUrl(String fileName, FileType fileType) {
         try {
             String bucketName = getBucketName(fileType);
@@ -53,6 +78,32 @@ public class FileStorageService {
         } catch (Exception e) {
             log.error("Error generating presigned URL for file: {}", fileName, e);
             throw new FileStorageException("Failed to generate URL for file: " + fileName);
+        }
+    }
+
+    private void validateImageFile(MultipartFile file) {
+        validateFile(file, FileType.PROFILE_PHOTO);
+
+        String contentType = file.getContentType();
+        if (!minioProperties.getAllowedImageTypes().contains(contentType)) {
+            throw new InvalidFileException("Invalid image type: " + contentType);
+        }
+    }
+
+    private void validateFile(MultipartFile file, FileType fileType) {
+        if (file.isEmpty()) {
+            throw new InvalidFileException("File is empty");
+        }
+
+        if (file.getSize() > minioProperties.getMaxFileSize()) {
+            throw new InvalidFileException("File size exceeds maximum allowed size");
+        }
+
+        String contentType = file.getContentType();
+        if (fileType == FileType.POST_MEDIA) {
+            if (!isValidMediaType(contentType)) {
+                throw new InvalidFileException("Invalid file type: " + contentType);
+            }
         }
     }
 
