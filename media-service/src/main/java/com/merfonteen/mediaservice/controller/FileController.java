@@ -12,12 +12,15 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
-@RequiredArgsConstructor
 @RequestMapping("/api/files")
 @RestController
 public class FileController {
 
     private final FileStorageService fileStorageService;
+
+    public FileController(FileStorageService fileStorageService) {
+        this.fileStorageService = fileStorageService;
+    }
 
     @PostMapping("/posts/{postId}/media")
     public ResponseEntity<FileUploadResponse> uploadPostMedia(@PathVariable Long postId,

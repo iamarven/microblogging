@@ -22,7 +22,6 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class UserMediaServiceImpl implements UserMediaService {
 
-    private final UserMapper userMapper;
     private final MediaClient mediaClient;
     private final UserRepository userRepository;
 
