@@ -19,7 +19,7 @@ public class MinioProperties {
     private Long maxFileSize = 10485760L;
 
     private List<String> allowedImageTypes = Arrays.asList(
-            "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"
+            "image/jpeg", "image/jpg", "image/png"
     );
 
     private List<String> allowedVideoTypes = Arrays.asList(

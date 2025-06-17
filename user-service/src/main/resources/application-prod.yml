@@ -22,3 +22,6 @@ eureka:
   client:
     service-url:
       defaultZone: http://eureka-server:8761/eureka
+
+media-service:
+  url: http://media-service:8086
