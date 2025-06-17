@@ -49,6 +49,9 @@ public class FileStorageService {
     }
 
     public void deleteFile(String fileName, FileType fileType) {
+        if(fileType != FileType.POST_MEDIA) {
+            throw new InvalidFileException("Invalid file type: " + fileType);
+        }
         try {
             String bucketName = getBucketName(fileType);
             minioClient.removeObject(

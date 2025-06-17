@@ -23,6 +23,8 @@ public class GatewayRoutesConfig {
                         .uri("lb://notification-service"))
                 .route("comment-service", r -> r.path("/api/comments/**")
                         .uri("lb://comment-service"))
+                .route("media-service", r -> r.path("/api/files/**")
+                        .uri("lb://media-service"))
                 .build();
     }
 }

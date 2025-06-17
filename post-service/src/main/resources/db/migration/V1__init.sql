@@ -14,6 +14,7 @@ CREATE TABLE post_service.post_media
 (
     id         BIGSERIAL PRIMARY KEY,
     post_id    BIGINT    NOT NULL,
+    file_name  TEXT      NOT NULL,
     file_url   TEXT      NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
 
@@ -23,6 +24,6 @@ CREATE TABLE post_service.post_media
             ON DELETE CASCADE
 );
 
-CREATE INDEX idx_post_media_post_id ON post_service.post_media(post_id);
+CREATE INDEX idx_post_media_post_id ON post_service.post_media (post_id);
 CREATE INDEX idx_posts_created_at ON post_service.posts (created_at DESC);
 CREATE INDEX idx_posts_updated_at ON post_service.posts (updated_at DESC);

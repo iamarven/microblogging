@@ -59,10 +59,8 @@ public class FileController {
     }
 
     @DeleteMapping("/{fileType}/{fileName}")
-    public ResponseEntity<Void> deleteFile(
-            @PathVariable String fileType,
-            @PathVariable String fileName,
-            @RequestHeader("X-User-Id") Long userId) {
+    public ResponseEntity<Void> deleteFile(@PathVariable String fileType,
+                                           @PathVariable String fileName) {
 
         FileType type = FileType.valueOf(fileType.toUpperCase());
         fileStorageService.deleteFile(fileName, type);
@@ -71,9 +69,8 @@ public class FileController {
     }
 
     @GetMapping("/{fileType}/{fileName}/url")
-    public ResponseEntity<FileUrlResponse> getFileUrl(
-            @PathVariable String fileType,
-            @PathVariable String fileName) {
+    public ResponseEntity<FileUrlResponse> getFileUrl(@PathVariable String fileType,
+                                                      @PathVariable String fileName) {
 
         FileType type = FileType.valueOf(fileType.toUpperCase());
         String fileUrl = fileStorageService.getFileUrl(fileName, type);

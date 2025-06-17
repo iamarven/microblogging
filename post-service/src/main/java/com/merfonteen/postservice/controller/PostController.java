@@ -5,7 +5,6 @@ import com.merfonteen.postservice.dto.PostCreateDto;
 import com.merfonteen.postservice.dto.PostResponseDto;
 import com.merfonteen.postservice.dto.PostUpdateDto;
 import com.merfonteen.postservice.dto.UserPostsPageResponseDto;
-import com.merfonteen.postservice.model.PostMedia;
 import com.merfonteen.postservice.model.enums.PostSortField;
 import com.merfonteen.postservice.service.PostMediaService;
 import com.merfonteen.postservice.service.PostService;
@@ -16,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URI;
+import java.util.List;
 
 @RequestMapping("/api/posts")
 @RestController
@@ -37,6 +37,11 @@ public class PostController {
     @GetMapping("/{id}/author-id")
     public ResponseEntity<Long> getPostAuthorId(@PathVariable("id") Long id) {
         return ResponseEntity.ok(postService.getPostAuthorId(id));
+    }
+
+    @GetMapping("/{id}/media")
+    public ResponseEntity<List<String>> getMediaUrlsForPost(@PathVariable("id") Long id) {
+        return ResponseEntity.ok(postMediaService.getMediaUrlsForPost(id));
     }
 
     @GetMapping("/users/{userId}")
@@ -79,5 +84,14 @@ public class PostController {
     public ResponseEntity<PostResponseDto> deletePost(@PathVariable("id") Long id,
                                                       @RequestHeader(name = "X-User-Id") Long currentUserId) {
         return ResponseEntity.ok(postService.deletePost(id, currentUserId));
+    }
+
+    @DeleteMapping("/{id}/delete/media/{fileType}/{fileName}")
+    public ResponseEntity<Void> deletePostMedia(@PathVariable("id") Long id,
+                                                @PathVariable String fileType,
+                                                @PathVariable String fileName,
+                                                @RequestHeader(name = "X-User-Id") Long currentUserId) {
+        postMediaService.deletePostMedia(id, fileType, fileName, currentUserId);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -22,6 +22,9 @@ public class PostMedia {
     @JoinColumn(name = "post_id", nullable = false)
     private Post post;
 
+    @Column(name = "file_name", nullable = false)
+    private String fileName;
+
     @Column(name = "file_url", nullable = false)
     private String fileUrl;
 
