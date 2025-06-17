@@ -2,7 +2,7 @@
 
 A microservices application. A mini-social network with basic functionality: creating posts, subscribing to users, likes/coments, creating a personal news feed.
 
-![schema_as_svg](https://github.com/user-attachments/assets/67d7f4a4-f42f-4088-a12b-e383b9bd1299)
+![schema_svg](https://github.com/user-attachments/assets/b0259ada-5cc6-4b55-911d-d317ff6e6e13)
 
 ## Tech stack
 
@@ -17,6 +17,7 @@ A microservices application. A mini-social network with basic functionality: cre
 - **Maven**
 - **Feign Client**
 - **Flyway**
+- **MinIO**
 - **MapStruct**
 - **JUnit and Mockito**
 - **Testcontainers**
