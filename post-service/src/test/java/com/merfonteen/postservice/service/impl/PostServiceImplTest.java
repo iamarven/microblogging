@@ -33,6 +33,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import static com.merfonteen.postservice.service.impl.PostServiceImplTest.TestResources.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
@@ -69,291 +71,247 @@ class PostServiceImplTest {
 
     @Test
     void testGetPostById_Success() {
-        Long id = 1L;
+        Post post = buildPost();
+        PostResponseDto expected = buildPostResponseDto(CONTENT);
 
-        Post post = Post.builder()
-                .id(1L)
-                .content("content")
-                .build();
-
-        PostResponseDto expected = PostResponseDto.builder()
-                .id(1L)
-                .content("content")
-                .build();
-
-        when(postRepository.findById(id)).thenReturn(Optional.ofNullable(post));
+        when(postRepository.findById(POST_ID)).thenReturn(Optional.ofNullable(post));
         when(postMapper.toDto(post)).thenReturn(expected);
 
-        PostResponseDto result = postService.getPostById(id);
+        PostResponseDto result = postService.getPostById(POST_ID);
 
-        assertEquals(expected.getId(), result.getId());
-        assertEquals(expected.getContent(), result.getContent());
+        assertThat(result).isEqualTo(expected);
     }
 
     @Test
     void testGetPostById_WhenPostNotFound_ShouldThrowException() {
-        Long id = 1L;
-        when(postRepository.findById(id)).thenReturn(Optional.empty());
-        assertThrows(NotFoundException.class, () -> postService.getPostById(id));
+        when(postRepository.findById(POST_ID)).thenReturn(Optional.empty());
+        assertThrows(NotFoundException.class, () -> postService.getPostById(POST_ID));
     }
 
     @Test
     void testGetUserPosts_Success() {
-        Long userId = 1L;
-        int page = 0;
-        int size = 10;
-        PostSortField sortField = PostSortField.CREATED_AT;
-        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, sortField.getFieldName()));
-
-        Post post = Post.builder()
-                .id(1L)
-                .authorId(userId)
-                .content("content")
-                .createdAt(Instant.now().minusSeconds(3600000))
-                .build();
-
-        PostResponseDto postDto = PostResponseDto.builder()
-                .id(1L)
-                .authorId(userId)
-                .content("content")
-                .createdAt(Instant.now().minusSeconds(3600000))
-                .build();
-
-        List<Post> userPosts = new ArrayList<>(List.of(post));
-        Page<Post> userPostsPage = new PageImpl<>(userPosts);
+        PageRequest pageRequest = buildPageRequest();
+        PostResponseDto postDto = buildPostResponseDto(Instant.now().minusSeconds(3600000));
+        Page<Post> userPostsPage = buildPostsPage();
         List<PostResponseDto> postResponseDtos = new ArrayList<>(List.of(postDto));
 
-        when(postRepository.findAllByAuthorId(userId, pageRequest)).thenReturn(userPostsPage);
+        when(postRepository.findAllByAuthorId(AUTHOR_ID, pageRequest)).thenReturn(userPostsPage);
         when(postMapper.toListDtos(userPostsPage.getContent())).thenReturn(postResponseDtos);
 
-        UserPostsPageResponseDto result = postService.getUserPosts(userId, page, size, sortField);
+        UserPostsPageResponseDto result = postService.getUserPosts(AUTHOR_ID, PAGE, SIZE, DEFAULT_SORT_FIELD);
 
-        assertEquals(postDto.getId(), result.getPosts().get(0).getId());
-        assertEquals(postDto.getContent(), result.getPosts().get(0).getContent());
-
-        verify(userClient).checkUserExists(userId);
+        assertThat(result.getPosts()).isEqualTo(postResponseDtos);
+        verify(userClient).checkUserExists(AUTHOR_ID);
     }
 
     @Test
     void testGetUserPosts_WhenUserNotFound_ShouldThrowException() {
-        Long userId = 1L;
-        int page = 0;
-        int size = 10;
-        PostSortField sortField = PostSortField.CREATED_AT;
-
         doThrow(FeignException.NotFound.class)
                 .when(userClient)
-                .checkUserExists(userId);
+                .checkUserExists(AUTHOR_ID);
 
         Exception exception = assertThrows(NotFoundException.class, () ->
-                postService.getUserPosts(userId, page, size, sortField));
+                postService.getUserPosts(AUTHOR_ID, PAGE, SIZE, DEFAULT_SORT_FIELD));
 
-        assertEquals("User with id '1' not found", exception.getMessage());
+        assertEquals(USER_NOT_FOUND_EX, exception.getMessage());
     }
 
     @Test
     void testCreatePost_Success() {
-        Long currentUserId = 1L;
-        PostCreateDto postCreateDto = PostCreateDto.builder()
-                .content("content")
-                .build();
-
-        Post post = Post.builder()
-                .id(1L)
-                .authorId(currentUserId)
-                .content(postCreateDto.getContent())
-                .createdAt(Instant.now())
-                .build();
-
-        PostResponseDto postDto = PostResponseDto.builder()
-                .id(1L)
-                .authorId(currentUserId)
-                .content(postCreateDto.getContent())
-                .createdAt(Instant.now())
-                .build();
+        PostCreateDto postCreateDto = buildPostCreateDto();
+        Post post = buildPost();
+        PostResponseDto expected = buildPostResponseDto(CONTENT);
 
         when(stringRedisTemplate.opsForValue()).thenReturn(valueOps);
         when(postRepository.save(any(Post.class))).thenReturn(post);
-        when(postMapper.toDto(any(Post.class))).thenReturn(postDto);
+        when(postMapper.toDto(any(Post.class))).thenReturn(expected);
 
-        PostResponseDto result = postService.createPost(currentUserId, postCreateDto);
+        PostResponseDto result = postService.createPost(AUTHOR_ID, postCreateDto);
 
-        assertEquals(post.getId(), result.getId());
-        assertEquals(post.getContent(), result.getContent());
+        assertThat(result).isEqualTo(expected);
 
-        verify(userClient).checkUserExists(currentUserId);
-        verify(rateLimiterService).validatePostCreationLimit(currentUserId);
-        verify(postCacheService).evictUserPostsCacheByUserId(currentUserId);
+        verify(userClient).checkUserExists(AUTHOR_ID);
+        verify(rateLimiterService).validatePostCreationLimit(AUTHOR_ID);
+        verify(postCacheService).evictUserPostsCacheByUserId(AUTHOR_ID);
     }
 
     @Test
     void testCreatePost_WhenRateLimitExceeded_ShouldThrowException() {
-        Long currentUserId = 1L;
-        PostCreateDto postCreateDto = PostCreateDto.builder()
-                .content("content")
-                .build();
-
-        doThrow(new TooManyRequestsException("You have exceeded the allowed number of posts per minute"))
+        doThrow(new TooManyRequestsException(LIMIT_EX))
                 .when(rateLimiterService)
-                .validatePostCreationLimit(currentUserId);
+                .validatePostCreationLimit(AUTHOR_ID);
 
-        Exception exception = assertThrows(TooManyRequestsException.class,
-                () -> postService.createPost(currentUserId, postCreateDto));
-
-        assertEquals("You have exceeded the allowed number of posts per minute", exception.getMessage());
+        assertThrows(TooManyRequestsException.class, () -> postService.createPost(AUTHOR_ID, buildPostCreateDto()));
         verify(postRepository, never()).save(any(Post.class));
     }
 
     @Test
     void testCreatePost_WhenUserNotFound_ShouldThrowException() {
-        Long currentUserId = 1L;
-        PostCreateDto postCreateDto = PostCreateDto.builder()
-                .content("content")
-                .build();
-
         doThrow(FeignException.NotFound.class)
                 .when(userClient)
-                .checkUserExists(currentUserId);
+                .checkUserExists(AUTHOR_ID);
 
         Exception exception = assertThrows(NotFoundException.class,
-                () -> postService.createPost(currentUserId, postCreateDto));
+                () -> postService.createPost(AUTHOR_ID, buildPostCreateDto()));
 
-        assertEquals("User with id '1' not found", exception.getMessage());
+        assertEquals(USER_NOT_FOUND_EX, exception.getMessage());
     }
 
     @Test
     void testUpdatePost_Success() {
-        Long id = 1L;
-        Long currentUserId = 10L;
-        PostUpdateDto postUpdateDto = PostUpdateDto.builder()
-                .content("new content")
-                .build();
+        PostUpdateDto postUpdateDto = buildPostUpdateDto();
+        Post postToUpdate = buildPost();
+        Post savedPost = buildUpdatedPost();
+        PostResponseDto postDto = buildPostResponseDto(UPDATED_CONTENT);
 
-        Post postToUpdate = Post.builder()
-                .id(id)
-                .authorId(currentUserId)
-                .content("old content")
-                .build();
-
-        Post savedPost = Post.builder()
-                .id(id)
-                .authorId(currentUserId)
-                .content("new content")
-                .build();
-
-        PostResponseDto postDto = PostResponseDto.builder()
-                .id(1L)
-                .authorId(currentUserId)
-                .content(postUpdateDto.getContent())
-                .build();
-
-        when(postRepository.findById(id)).thenReturn(Optional.ofNullable(postToUpdate));
+        when(postRepository.findById(POST_ID)).thenReturn(Optional.ofNullable(postToUpdate));
         when(postRepository.save(any(Post.class))).thenReturn(savedPost);
         when(postMapper.toDto(any(Post.class))).thenReturn(postDto);
 
-        PostResponseDto result = postService.updatePost(id, postUpdateDto, currentUserId);
+        PostResponseDto result = postService.updatePost(POST_ID, postUpdateDto, AUTHOR_ID);
 
-        assertEquals(postDto.getId(), result.getId());
-        assertEquals(postDto.getContent(), result.getContent());
-
-        verify(postCacheService).evictUserPostsCacheByUserId(currentUserId);
+        assertThat(result).isEqualTo(postDto);
+        verify(postCacheService).evictUserPostsCacheByUserId(AUTHOR_ID);
     }
 
     @Test
     void testUpdatePost_WhenPostNotFound_ShouldThrowException() {
-        Long id = 1L;
-        Long currentUserId = 10L;
-        PostUpdateDto postUpdateDto = PostUpdateDto.builder()
-                .content("new content")
-                .build();
+        PostUpdateDto postUpdateDto = buildPostUpdateDto();
 
-        when(postRepository.findById(id)).thenReturn(Optional.empty());
+        when(postRepository.findById(POST_ID)).thenReturn(Optional.empty());
 
         Exception exception = assertThrows(NotFoundException.class,
-                () -> postService.updatePost(id, postUpdateDto, currentUserId));
+                () -> postService.updatePost(POST_ID, postUpdateDto, AUTHOR_ID));
 
-        assertEquals("Post with id '1' not found", exception.getMessage());
+        assertEquals(POST_NOT_FOUND_EX, exception.getMessage());
     }
 
     @Test
     void testUpdatePost_WhenNotAllowed_ShouldThrowException() {
-        Long id = 1L;
-        Long currentUserId = 10L;
-        PostUpdateDto postUpdateDto = PostUpdateDto.builder()
-                .content("new content")
-                .build();
+        PostUpdateDto postUpdateDto = buildPostUpdateDto();
+        Post postToUpdate = buildPostWithUnknownUser();
 
-        Post postToUpdate = Post.builder()
-                .id(1L)
-                .authorId(100L)
-                .content("old content")
-                .build();
-
-        when(postRepository.findById(id)).thenReturn(Optional.ofNullable(postToUpdate));
+        when(postRepository.findById(POST_ID)).thenReturn(Optional.ofNullable(postToUpdate));
 
         Exception exception = assertThrows(ForbiddenException.class,
-                () -> postService.updatePost(id, postUpdateDto, currentUserId));
+                () -> postService.updatePost(POST_ID, postUpdateDto, AUTHOR_ID));
 
-        assertEquals("You are not allowed to modify this post", exception.getMessage());
+        assertEquals(NOT_ALLOWED_EX, exception.getMessage());
     }
 
     @Test
     void testDeletePost_Success() {
-        Long id = 1L;
-        Long currentUserId = 10L;
+        Post postToDelete = buildPost();
+        PostResponseDto postDto = buildPostResponseDto(CONTENT);
 
-        Post postToDelete = Post.builder()
-                .id(id)
-                .authorId(currentUserId)
-                .content("content")
-                .build();
-
-        PostResponseDto postDto = PostResponseDto.builder()
-                .id(1L)
-                .authorId(currentUserId)
-                .content("content")
-                .build();
-
-        when(postRepository.findById(id)).thenReturn(Optional.ofNullable(postToDelete));
+        when(postRepository.findById(POST_ID)).thenReturn(Optional.ofNullable(postToDelete));
         when(postMapper.toDto(any(Post.class))).thenReturn(postDto);
 
-        PostResponseDto result = postService.deletePost(id, currentUserId);
+        PostResponseDto result = postService.deletePost(POST_ID, AUTHOR_ID);
 
-        assertEquals(postDto.getId(), result.getId());
-        assertEquals(postDto.getContent(), result.getContent());
-
-        verify(postCacheService).evictUserPostsCacheByUserId(currentUserId);
+        assertThat(result).isEqualTo(postDto);
+        verify(postCacheService).evictUserPostsCacheByUserId(AUTHOR_ID);
     }
 
     @Test
     void testDeletePost_WhenPostNotFound_ShouldThrowException() {
-        Long id = 1L;
-        Long currentUserId = 10L;
-
-        when(postRepository.findById(id)).thenReturn(Optional.empty());
+        when(postRepository.findById(POST_ID)).thenReturn(Optional.empty());
 
         Exception exception = assertThrows(NotFoundException.class,
-                () -> postService.deletePost(id, currentUserId));
+                () -> postService.deletePost(POST_ID, AUTHOR_ID));
 
-        assertEquals("Post with id '1' not found", exception.getMessage());
+        assertEquals(POST_NOT_FOUND_EX, exception.getMessage());
     }
 
     @Test
     void testDeletePost_WhenNotAllowed_ShouldThrowException() {
-        Long id = 1L;
-        Long currentUserId = 10L;
+        Post postToDelete = buildPostWithUnknownUser();
 
-        Post postToDelete = Post.builder()
-                .id(id)
-                .authorId(100L)
-                .content("content")
-                .build();
-
-        when(postRepository.findById(id)).thenReturn(Optional.ofNullable(postToDelete));
+        when(postRepository.findById(POST_ID)).thenReturn(Optional.ofNullable(postToDelete));
 
         Exception exception = assertThrows(ForbiddenException.class,
-                () -> postService.deletePost(id, currentUserId));
+                () -> postService.deletePost(POST_ID, AUTHOR_ID));
 
-        assertEquals("You are not allowed to modify this post", exception.getMessage());
+        assertEquals(NOT_ALLOWED_EX, exception.getMessage());
+    }
+
+    static class TestResources {
+        static final Long POST_ID = 1L;
+        static final Long AUTHOR_ID = 1L;
+        static final Long UNKNOWN_USER_ID = 999L;
+        static final int PAGE = 0;
+        static final int SIZE = 10;
+        static final PostSortField DEFAULT_SORT_FIELD = PostSortField.CREATED_AT;
+        static final String CONTENT = "Test content";
+        static final String UPDATED_CONTENT = "New content";
+        static final String LIMIT_EX = "You have exceeded the allowed number of posts per minute";
+        static final String NOT_ALLOWED_EX = "You are not allowed to modify this post";
+        static final String POST_NOT_FOUND_EX = "Post with id '%d' not found".formatted(POST_ID);
+        static final String USER_NOT_FOUND_EX = "User with id '%d' not found".formatted(AUTHOR_ID);
+
+        static PageRequest buildPageRequest() {
+            return PageRequest.of(PAGE, SIZE, Sort.by(Sort.Direction.DESC, DEFAULT_SORT_FIELD.getFieldName()));
+        }
+
+        static PostCreateDto buildPostCreateDto() {
+            return PostCreateDto.builder()
+                    .content(CONTENT)
+                    .build();
+        }
+
+        static PostUpdateDto buildPostUpdateDto() {
+            return PostUpdateDto.builder()
+                    .content(UPDATED_CONTENT)
+                    .build();
+        }
+
+        static Post buildPost() {
+            return Post.builder()
+                    .id(POST_ID)
+                    .authorId(AUTHOR_ID)
+                    .content(CONTENT)
+                    .createdAt(Instant.now())
+                    .build();
+        }
+
+        static Post buildUpdatedPost() {
+            return Post.builder()
+                    .id(POST_ID)
+                    .authorId(AUTHOR_ID)
+                    .content(UPDATED_CONTENT)
+                    .createdAt(Instant.now())
+                    .build();
+        }
+
+        static Post buildPostWithUnknownUser() {
+            return Post.builder()
+                    .id(POST_ID)
+                    .authorId(UNKNOWN_USER_ID)
+                    .content(UPDATED_CONTENT)
+                    .createdAt(Instant.now())
+                    .build();
+        }
+
+        static PostResponseDto buildPostResponseDto(String content) {
+            return PostResponseDto.builder()
+                    .id(POST_ID)
+                    .authorId(1L)
+                    .content(content)
+                    .createdAt(Instant.now())
+                    .build();
+        }
+
+        static PostResponseDto buildPostResponseDto(Instant createdAt) {
+            return PostResponseDto.builder()
+                    .id(POST_ID)
+                    .authorId(1L)
+                    .content(CONTENT)
+                    .createdAt(createdAt)
+                    .build();
+        }
+
+        static Page<Post> buildPostsPage() {
+            return new PageImpl<>(List.of(buildPost()));
+        }
     }
 }
