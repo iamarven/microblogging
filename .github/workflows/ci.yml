@@ -48,9 +48,9 @@ jobs:
         ports:
           - 9092:9092
         env:
-          KAFKA_CFG_ZOOKEEPER_CONNECT: localhost:2181
+          KAFKA_CFG_ZOOKEEPER_CONNECT: zookeper:2181
           KAFKA_CFG_LISTENERS: PLAINTEXT://:9092
-          KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+          KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
         options: >-
           --health-cmd "kafka-topics.sh --bootstrap-server localhost:9092 --list"
           --health-interval 10s
