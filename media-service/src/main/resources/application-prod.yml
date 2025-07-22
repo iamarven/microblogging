@@ -43,7 +43,6 @@ minio:
     - video/avi
     - video/mov
 
-
 eureka:
   client:
     service-url:

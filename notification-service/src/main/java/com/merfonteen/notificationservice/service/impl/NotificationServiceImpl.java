@@ -13,6 +13,7 @@ import com.merfonteen.notificationservice.model.enums.NotificationFilter;
 import com.merfonteen.notificationservice.model.enums.NotificationType;
 import com.merfonteen.notificationservice.repository.NotificationRepository;
 import com.merfonteen.notificationservice.service.NotificationService;
+import feign.FeignException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -138,14 +139,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     @Override
     public void sendLikeNotification(Long senderId, Long likeId, Long postId) {
-        Long postAuthorId;
-
-        try {
-            postAuthorId = postClient.getPostAuthorId(postId);
-        } catch (NotFoundException e) {
-            log.warn("Post with id '{}' not found. Skipping notification.", postId);
-            return;
-        }
+        Long postAuthorId = postClient.getPostAuthorId(postId);
 
         Notification notification = Notification.builder()
                 .senderId(senderId)
@@ -214,6 +208,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public void sendCommentNotification(Long commentId, Long postId, Long leftCommentUserId) {
         Long postAuthorId = postClient.getPostAuthorId(postId);
+
         Notification notification = Notification.builder()
                 .senderId(leftCommentUserId)
                 .receiverId(postAuthorId)
@@ -242,8 +237,8 @@ public class NotificationServiceImpl implements NotificationService {
         List<SubscriptionDto> userSubscribers = Collections.emptyList();
         try {
             userSubscribers = feedClient.getUserSubscribers(authorId);
-        } catch (NotFoundException e) {
-            log.warn("User with id '{}' not found. Skip creating notifications", authorId);
+        } catch (FeignException.NotFound e) {
+            log.warn("Error during getting user's subscribers. Skip creating notification");
         }
         return userSubscribers;
     }

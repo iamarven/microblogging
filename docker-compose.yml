@@ -220,6 +220,39 @@ services:
     networks:
       - app-net
 
+  media-service:
+    build:
+      context: ./media-service
+      dockerfile: Dockerfile
+    container_name: media-service
+    restart: always
+    ports:
+      - "8086:8086"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://media-db:5432/media_service_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+    depends_on:
+      - eureka-server
+      - media-db
+    networks:
+      - app-net
+
+  media-db:
+    image: postgres:15-alpine
+    container_name: media-db
+    environment:
+      POSTGRES_DB: media_service_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5438:5432"
+    volumes:
+      - media-db-data:/var/lib/postgresql/data
+    networks:
+      - app-net
+
   redis:
     image: redis:7.2.4
     container_name: redis
@@ -289,6 +322,7 @@ volumes:
   like-db-data:
   notification-db-data:
   comment-db-data:
+  media-db-data:
 
 networks:
   app-net:
