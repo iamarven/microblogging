@@ -19,13 +19,5 @@ public class RateLimiterService {
     public void validatePostCreationLimit(Long userId) {
         String key = "post_create:" + userId;
         Long currentCount = stringRedisTemplate.opsForValue().increment(key);
-
-        if(currentCount != null && currentCount == 1) {
-            stringRedisTemplate.expire(key, DURATION);
-        }
-
-        if(currentCount != null && currentCount > POST_LIMIT) {
-            throw new TooManyRequestsException("You have exceeded the allowed number of posts per minute");
-        }
     }
 }
