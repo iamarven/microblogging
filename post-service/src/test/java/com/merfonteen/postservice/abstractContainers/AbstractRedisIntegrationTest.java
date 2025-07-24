@@ -1,4 +1,4 @@
-package com.merfonteen.postservice.service.impl;
+package com.merfonteen.postservice.abstractContainers;
 
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;

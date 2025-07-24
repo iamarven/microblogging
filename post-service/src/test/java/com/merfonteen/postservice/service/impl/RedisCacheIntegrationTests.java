@@ -1,5 +1,6 @@
 package com.merfonteen.postservice.service.impl;
 
+import com.merfonteen.postservice.abstractContainers.AbstractRedisIntegrationTest;
 import com.merfonteen.postservice.client.UserClient;
 import com.merfonteen.postservice.dto.PostCreateDto;
 import com.merfonteen.postservice.dto.PostResponseDto;
