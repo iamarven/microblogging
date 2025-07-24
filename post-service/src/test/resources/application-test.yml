@@ -1,12 +1,11 @@
 spring:
   datasource:
-    url: jdbc:tc:postgresql:15-alpine:///test-db
     username: test
     password: test
-    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+    driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: none
+      ddl-auto: create
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
@@ -14,7 +13,7 @@ spring:
   flyway:
     enabled: true
     schemas: post_service
-    baseline-on-migrate: true
+    locations: classpath:db/migration
   data:
     redis:
       host: localhost

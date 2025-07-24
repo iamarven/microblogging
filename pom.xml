@@ -15,6 +15,7 @@
     <module>feed-service</module>
     <module>like-service</module>
     <module>notification-service</module>
+    <module>comment-service</module>
     <module>media-service</module>
     <module>service-discovery</module>
     <module>api-gateway</module>
