@@ -14,7 +14,6 @@ import com.merfonteen.postservice.service.PostPublisher;
 import com.merfonteen.postservice.service.PostService;
 import com.merfonteen.postservice.service.RateLimiterService;
 import com.merfonteen.postservice.util.AuthUtil;
-import com.merfonteen.postservice.util.PostFactory;
 import com.merfonteen.postservice.util.PostValidator;
 import com.merfonteen.postservice.util.StringRedisCounter;
 import jakarta.transaction.Transactional;
@@ -38,7 +37,6 @@ import java.util.Optional;
 @Service
 public class PostServiceImpl implements PostService {
     private final PostMapper postMapper;
-    private final PostFactory postFactory;
     private final PostValidator postValidator;
     private final PostPublisher postPublisher;
     private final PostRepository postRepository;
@@ -93,12 +91,17 @@ public class PostServiceImpl implements PostService {
     public PostResponse createPost(Long currentUserId, PostCreateRequest request) {
         rateLimiterService.validatePostCreationLimit(currentUserId);
 
-        Post post = postFactory.create(currentUserId, request);
+        Post post = Post.builder()
+                .authorId(currentUserId)
+                .content(request.getContent())
+                .createdAt(Instant.now())
+                .build();
+
         Post savedPost = postRepository.save(post);
         log.info("Post with id '{}' successfully created by user '{}'", savedPost.getId(), currentUserId);
 
         redisCounter.incrementCounter(currentUserId);
-        postPublisher.publishPostCreatedEvent(post.getId(), currentUserId);
+        postPublisher.publishPostCreatedEvent(savedPost.getId(), currentUserId);
 
         return postMapper.toDto(savedPost);
     }

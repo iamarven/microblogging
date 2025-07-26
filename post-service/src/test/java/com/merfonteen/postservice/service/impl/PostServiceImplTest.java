@@ -9,14 +9,14 @@ import com.merfonteen.postservice.dto.PostResponse;
 import com.merfonteen.postservice.dto.PostUpdateRequest;
 import com.merfonteen.postservice.dto.PostsSearchRequest;
 import com.merfonteen.postservice.dto.UserPostsPageResponse;
-import com.merfonteen.postservice.kafkaProducer.PostEventProducer;
 import com.merfonteen.postservice.mapper.PostMapper;
 import com.merfonteen.postservice.model.Post;
 import com.merfonteen.postservice.model.enums.PostSortField;
 import com.merfonteen.postservice.repository.PostRepository;
+import com.merfonteen.postservice.service.PostPublisher;
 import com.merfonteen.postservice.service.RateLimiterService;
+import com.merfonteen.postservice.util.PostValidator;
 import com.merfonteen.postservice.util.StringRedisCounter;
-import feign.FeignException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -26,8 +26,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -44,13 +42,13 @@ import static org.mockito.Mockito.*;
 class PostServiceImplTest {
 
     @Mock
-    private UserClient userClient;
-
-    @Mock
     private PostMapper postMapper;
 
     @Mock
     private PostRepository postRepository;
+
+    @Mock
+    private PostPublisher postPublisher;
 
     @Mock
     private StringRedisCounter redisCounter;
@@ -59,7 +57,7 @@ class PostServiceImplTest {
     private RateLimiterService rateLimiterService;
 
     @Mock
-    private PostEventProducer postEventProducer;
+    private PostValidator postValidator;
 
     @InjectMocks
     private PostServiceImpl postService;
@@ -100,19 +98,6 @@ class PostServiceImplTest {
         UserPostsPageResponse result = postService.getUserPosts(AUTHOR_ID, request);
 
         assertThat(result.getPosts()).isEqualTo(postResponses);
-        verify(userClient).checkUserExists(AUTHOR_ID);
-    }
-
-    @Test
-    void testGetUserPosts_WhenUserNotFound_ShouldThrowException() {
-        doThrow(FeignException.NotFound.class)
-                .when(userClient)
-                .checkUserExists(AUTHOR_ID);
-
-        Exception exception = assertThrows(NotFoundException.class, () ->
-                postService.getUserPosts(AUTHOR_ID, buildPostsSearchRequest()));
-
-        assertEquals(USER_NOT_FOUND_EX, exception.getMessage());
     }
 
     @Test
@@ -128,8 +113,8 @@ class PostServiceImplTest {
 
         assertThat(result).isEqualTo(expected);
 
-        verify(userClient).checkUserExists(AUTHOR_ID);
         verify(rateLimiterService).validatePostCreationLimit(AUTHOR_ID);
+        verify(postPublisher).publishPostCreatedEvent(POST_ID, AUTHOR_ID);
     }
 
     @Test
@@ -140,18 +125,6 @@ class PostServiceImplTest {
 
         assertThrows(TooManyRequestsException.class, () -> postService.createPost(AUTHOR_ID, buildPostCreateDto()));
         verify(postRepository, never()).save(any(Post.class));
-    }
-
-    @Test
-    void testCreatePost_WhenUserNotFound_ShouldThrowException() {
-        doThrow(FeignException.NotFound.class)
-                .when(userClient)
-                .checkUserExists(AUTHOR_ID);
-
-        Exception exception = assertThrows(NotFoundException.class,
-                () -> postService.createPost(AUTHOR_ID, buildPostCreateDto()));
-
-        assertEquals(USER_NOT_FOUND_EX, exception.getMessage());
     }
 
     @Test
@@ -203,6 +176,7 @@ class PostServiceImplTest {
 
         postService.deletePost(POST_ID, AUTHOR_ID);
         verify(postRepository).deleteById(POST_ID);
+        verify(postPublisher).publishPostRemovedEvent(POST_ID, AUTHOR_ID);
     }
 
     @Test
@@ -239,7 +213,6 @@ class PostServiceImplTest {
         static final String LIMIT_EX = "You have exceeded the allowed number of posts per minute";
         static final String NOT_ALLOWED_EX = "You are not allowed to modify this post";
         static final String POST_NOT_FOUND_EX = "Post with id '%d' not found".formatted(POST_ID);
-        static final String USER_NOT_FOUND_EX = "User with id '%d' not found".formatted(AUTHOR_ID);
 
         static PageRequest buildPageRequest() {
             return PageRequest.of(PAGE, SIZE, Sort.by(Sort.Direction.DESC, DEFAULT_SORT_FIELD.getFieldName()));
