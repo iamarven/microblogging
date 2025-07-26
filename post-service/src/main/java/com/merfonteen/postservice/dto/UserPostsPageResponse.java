@@ -12,8 +12,8 @@ import java.util.List;
 @NoArgsConstructor
 @Builder
 @Data
-public class UserPostsPageResponseDto implements Serializable {
-    private List<PostResponseDto> posts;
+public class UserPostsPageResponse implements Serializable {
+    private List<PostResponse> posts;
     private int currentPage;
     private int totalPages;
     private long totalElements;

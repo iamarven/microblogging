@@ -2,10 +2,10 @@ package com.merfonteen.postservice.service.impl;
 
 import com.merfonteen.postservice.abstractContainers.AbstractRedisIntegrationTest;
 import com.merfonteen.postservice.client.UserClient;
-import com.merfonteen.postservice.dto.PostCreateDto;
-import com.merfonteen.postservice.dto.PostResponseDto;
-import com.merfonteen.postservice.dto.PostUpdateDto;
-import com.merfonteen.postservice.dto.UserPostsPageResponseDto;
+import com.merfonteen.postservice.dto.PostCreateRequest;
+import com.merfonteen.postservice.dto.PostResponse;
+import com.merfonteen.postservice.dto.PostUpdateRequest;
+import com.merfonteen.postservice.dto.UserPostsPageResponse;
 import com.merfonteen.postservice.kafkaProducer.PostEventProducer;
 import com.merfonteen.postservice.model.Post;
 import com.merfonteen.postservice.repository.PostRepository;
@@ -65,7 +65,7 @@ public class RedisCacheIntegrationTests extends AbstractRedisIntegrationTest {
         Post post = getSavedPost();
 
         String url = "/api/posts/" + post.getId();
-        testRestTemplate.getForEntity(url, PostResponseDto.class);
+        testRestTemplate.getForEntity(url, PostResponse.class);
 
         String cacheKey = "post-by-id::" + post.getId();
         assertThat(redisOps.get(cacheKey)).isNotNull();
@@ -78,7 +78,7 @@ public class RedisCacheIntegrationTests extends AbstractRedisIntegrationTest {
         doNothing().when(userClient).checkUserExists(post.getAuthorId());
 
         String url = "/api/posts/users/" + post.getAuthorId();
-        testRestTemplate.getForEntity(url, UserPostsPageResponseDto.class);
+        testRestTemplate.getForEntity(url, UserPostsPageResponse.class);
 
         String cacheKey = "user-posts::" + post.getAuthorId() + ":0:10";
         assertThat(redisOps.get(cacheKey)).isNotNull();
@@ -93,10 +93,10 @@ public class RedisCacheIntegrationTests extends AbstractRedisIntegrationTest {
         String cacheKey = "user-posts::" + post.getAuthorId() + ":0:10";
 
         String urlToCacheData = "/api/posts/users/" + post.getAuthorId();
-        testRestTemplate.getForEntity(urlToCacheData, UserPostsPageResponseDto.class);
+        testRestTemplate.getForEntity(urlToCacheData, UserPostsPageResponse.class);
         assertThat(redisOps.get(cacheKey)).isNotNull();
 
-        PostCreateDto createDto = PostCreateDto.builder()
+        PostCreateRequest createDto = PostCreateRequest.builder()
                 .content("new content")
                 .build();
 
@@ -104,8 +104,8 @@ public class RedisCacheIntegrationTests extends AbstractRedisIntegrationTest {
         httpHeaders.setContentType(MediaType.APPLICATION_JSON);
         httpHeaders.set("X-User-Id", String.valueOf(post.getAuthorId()));
 
-        HttpEntity<PostCreateDto> request = new HttpEntity<>(createDto, httpHeaders);
-        testRestTemplate.postForEntity("/api/posts", request, PostResponseDto.class);
+        HttpEntity<PostCreateRequest> request = new HttpEntity<>(createDto, httpHeaders);
+        testRestTemplate.postForEntity("/api/posts", request, PostResponse.class);
 
         assertThat(redisOps.get(cacheKey)).isNull();
     }
@@ -120,14 +120,14 @@ public class RedisCacheIntegrationTests extends AbstractRedisIntegrationTest {
         String cacheKeyForUserPosts = "user-posts::" + post.getAuthorId() + ":0:10";
 
         String urlToCacheDataForPostById = "/api/posts/" + post.getId();
-        testRestTemplate.getForEntity(urlToCacheDataForPostById, PostResponseDto.class);
+        testRestTemplate.getForEntity(urlToCacheDataForPostById, PostResponse.class);
         assertThat(redisOps.get(cacheKeyForPostById)).isNotNull();
 
         String urlToCacheDataForUserPosts = "/api/posts/users/" + post.getAuthorId();
-        testRestTemplate.getForEntity(urlToCacheDataForUserPosts, UserPostsPageResponseDto.class);
+        testRestTemplate.getForEntity(urlToCacheDataForUserPosts, UserPostsPageResponse.class);
         assertThat(redisOps.get(cacheKeyForUserPosts)).isNotNull();
 
-        PostUpdateDto updateDto = PostUpdateDto.builder()
+        PostUpdateRequest updateDto = PostUpdateRequest.builder()
                 .content("updated content")
                 .build();
 
@@ -135,13 +135,13 @@ public class RedisCacheIntegrationTests extends AbstractRedisIntegrationTest {
         httpHeaders.setContentType(MediaType.APPLICATION_JSON);
         httpHeaders.set("X-User-Id", String.valueOf(post.getAuthorId()));
 
-        HttpEntity<PostUpdateDto> request = new HttpEntity<>(updateDto, httpHeaders);
+        HttpEntity<PostUpdateRequest> request = new HttpEntity<>(updateDto, httpHeaders);
 
         testRestTemplate.exchange(
                 "/api/posts/" + post.getId(),
                 HttpMethod.PATCH,
                 request,
-                PostResponseDto.class
+                PostResponse.class
         );
 
         assertThat(redisOps.get(cacheKeyForPostById)).isNull();
@@ -158,11 +158,11 @@ public class RedisCacheIntegrationTests extends AbstractRedisIntegrationTest {
         String cacheKeyForUserPosts = "user-posts::" + post.getAuthorId() + ":0:10";
 
         String urlToCacheDataForPostById = "/api/posts/" + post.getId();
-        testRestTemplate.getForEntity(urlToCacheDataForPostById, PostResponseDto.class);
+        testRestTemplate.getForEntity(urlToCacheDataForPostById, PostResponse.class);
         assertThat(redisOps.get(cacheKeyForPostById)).isNotNull();
 
         String urlToCacheDataForUserPosts = "/api/posts/users/" + post.getAuthorId();
-        testRestTemplate.getForEntity(urlToCacheDataForUserPosts, UserPostsPageResponseDto.class);
+        testRestTemplate.getForEntity(urlToCacheDataForUserPosts, UserPostsPageResponse.class);
         assertThat(redisOps.get(cacheKeyForUserPosts)).isNotNull();
 
         HttpHeaders httpHeaders = new HttpHeaders();
@@ -171,11 +171,11 @@ public class RedisCacheIntegrationTests extends AbstractRedisIntegrationTest {
 
         HttpEntity<Void> request = new HttpEntity<>(httpHeaders);
 
-        ResponseEntity<PostResponseDto> response = testRestTemplate.exchange(
+        ResponseEntity<PostResponse> response = testRestTemplate.exchange(
                 "/api/posts/" + post.getId(),
                 HttpMethod.DELETE,
                 request,
-                PostResponseDto.class
+                PostResponse.class
         );
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);

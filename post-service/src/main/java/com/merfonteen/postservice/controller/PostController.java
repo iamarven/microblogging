@@ -1,18 +1,25 @@
 package com.merfonteen.postservice.controller;
 
 import com.merfonteen.dtos.FileUploadResponse;
-import com.merfonteen.postservice.dto.PostCreateDto;
-import com.merfonteen.postservice.dto.PostResponseDto;
-import com.merfonteen.postservice.dto.PostUpdateDto;
+import com.merfonteen.postservice.dto.PostCreateRequest;
+import com.merfonteen.postservice.dto.PostResponse;
+import com.merfonteen.postservice.dto.PostUpdateRequest;
 import com.merfonteen.postservice.dto.PostsSearchRequest;
-import com.merfonteen.postservice.dto.UserPostsPageResponseDto;
-import com.merfonteen.postservice.model.enums.PostSortField;
+import com.merfonteen.postservice.dto.UserPostsPageResponse;
 import com.merfonteen.postservice.service.PostMediaService;
 import com.merfonteen.postservice.service.PostService;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Min;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URI;
@@ -31,7 +38,7 @@ public class PostController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PostResponseDto> getPostById(@PathVariable("id") Long id) {
+    public ResponseEntity<PostResponse> getPostById(@PathVariable("id") Long id) {
         return ResponseEntity.ok(postService.getPostById(id));
     }
 
@@ -46,8 +53,8 @@ public class PostController {
     }
 
     @GetMapping("/users/{userId}")
-    public ResponseEntity<UserPostsPageResponseDto> getUserPosts(@PathVariable("userId") Long userId,
-                                                                 PostsSearchRequest request) {
+    public ResponseEntity<UserPostsPageResponse> getUserPosts(@PathVariable("userId") Long userId,
+                                                              PostsSearchRequest request) {
         return ResponseEntity.ok(postService.getUserPosts(userId, request));
     }
 
@@ -57,9 +64,9 @@ public class PostController {
     }
 
     @PostMapping
-    public ResponseEntity<PostResponseDto> createPost(@RequestHeader(name = "X-User-Id") Long currentUserId,
-                                                      @RequestBody @Valid PostCreateDto createDto) {
-        PostResponseDto createdPost = postService.createPost(currentUserId, createDto);
+    public ResponseEntity<PostResponse> createPost(@RequestHeader(name = "X-User-Id") Long currentUserId,
+                                                   @RequestBody @Valid PostCreateRequest createDto) {
+        PostResponse createdPost = postService.createPost(currentUserId, createDto);
         URI location = URI.create("/api/posts/" + createdPost.getId());
         return ResponseEntity.created(location).body(createdPost);
     }
@@ -72,16 +79,17 @@ public class PostController {
     }
 
     @PatchMapping("/{id}")
-    public ResponseEntity<PostResponseDto> updatePost(@PathVariable("id") Long id,
-                                                      @RequestBody @Valid PostUpdateDto updateDto,
-                                                      @RequestHeader(name = "X-User-Id") Long currentUserId) {
+    public ResponseEntity<PostResponse> updatePost(@PathVariable("id") Long id,
+                                                   @RequestBody @Valid PostUpdateRequest updateDto,
+                                                   @RequestHeader(name = "X-User-Id") Long currentUserId) {
         return ResponseEntity.ok(postService.updatePost(id, updateDto, currentUserId));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<PostResponseDto> deletePost(@PathVariable("id") Long id,
-                                                      @RequestHeader(name = "X-User-Id") Long currentUserId) {
-        return ResponseEntity.ok(postService.deletePost(id, currentUserId));
+    public ResponseEntity<Void> deletePost(@PathVariable("id") Long id,
+                                                   @RequestHeader(name = "X-User-Id") Long currentUserId) {
+        postService.deletePost(id, currentUserId);
+        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{id}/delete/media/{fileType}/{fileName}")

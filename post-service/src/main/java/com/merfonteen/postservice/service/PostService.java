@@ -1,24 +1,23 @@
 package com.merfonteen.postservice.service;
 
-import com.merfonteen.postservice.dto.PostCreateDto;
-import com.merfonteen.postservice.dto.PostResponseDto;
-import com.merfonteen.postservice.dto.PostUpdateDto;
+import com.merfonteen.postservice.dto.PostCreateRequest;
+import com.merfonteen.postservice.dto.PostResponse;
+import com.merfonteen.postservice.dto.PostUpdateRequest;
 import com.merfonteen.postservice.dto.PostsSearchRequest;
-import com.merfonteen.postservice.dto.UserPostsPageResponseDto;
-import com.merfonteen.postservice.model.enums.PostSortField;
+import com.merfonteen.postservice.dto.UserPostsPageResponse;
 
 public interface PostService {
-    PostResponseDto getPostById(Long id);
+    PostResponse getPostById(Long id);
 
     Long getPostAuthorId(Long postId);
 
-    UserPostsPageResponseDto getUserPosts(Long userId, PostsSearchRequest request);
+    UserPostsPageResponse getUserPosts(Long userId, PostsSearchRequest request);
 
     Long getPostCount(Long userId);
 
-    PostResponseDto createPost(Long currentUserId, PostCreateDto createDto);
+    PostResponse createPost(Long currentUserId, PostCreateRequest createDto);
 
-    PostResponseDto updatePost(Long id, PostUpdateDto updateDto, Long currentUserId);
+    PostResponse updatePost(Long id, PostUpdateRequest updateDto, Long currentUserId);
 
-    PostResponseDto deletePost(Long id, Long currentUserId);
+    void deletePost(Long id, Long currentUserId);
 }

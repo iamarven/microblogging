@@ -14,7 +14,7 @@ import java.util.List;
 @NoArgsConstructor
 @Builder
 @Data
-public class PostResponseDto implements Serializable {
+public class PostResponse implements Serializable {
     private Long id;
     @JsonProperty("author_id")
     private Long authorId;

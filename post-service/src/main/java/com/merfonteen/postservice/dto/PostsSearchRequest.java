@@ -17,6 +17,5 @@ public class PostsSearchRequest {
     @Min(1)
     @Builder.Default
     private int size = 10;
-    @Builder.Default
-    private String sortBy = "createdAt";
+    private String sortBy;
 }
