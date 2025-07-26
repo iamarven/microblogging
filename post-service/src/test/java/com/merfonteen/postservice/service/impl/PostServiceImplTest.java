@@ -7,13 +7,13 @@ import com.merfonteen.postservice.client.UserClient;
 import com.merfonteen.postservice.dto.PostCreateDto;
 import com.merfonteen.postservice.dto.PostResponseDto;
 import com.merfonteen.postservice.dto.PostUpdateDto;
+import com.merfonteen.postservice.dto.PostsSearchRequest;
 import com.merfonteen.postservice.dto.UserPostsPageResponseDto;
 import com.merfonteen.postservice.kafkaProducer.PostEventProducer;
 import com.merfonteen.postservice.mapper.PostMapper;
 import com.merfonteen.postservice.model.Post;
 import com.merfonteen.postservice.model.enums.PostSortField;
 import com.merfonteen.postservice.repository.PostRepository;
-import com.merfonteen.postservice.service.PostCacheService;
 import com.merfonteen.postservice.service.RateLimiterService;
 import feign.FeignException;
 import org.junit.jupiter.api.Test;
@@ -55,9 +55,6 @@ class PostServiceImplTest {
     private RateLimiterService rateLimiterService;
 
     @Mock
-    private PostCacheService postCacheService;
-
-    @Mock
     private StringRedisTemplate stringRedisTemplate;
 
     @Mock
@@ -91,14 +88,16 @@ class PostServiceImplTest {
     @Test
     void testGetUserPosts_Success() {
         PageRequest pageRequest = buildPageRequest();
+        PostsSearchRequest request = buildPostsSearchRequest();
         PostResponseDto postDto = buildPostResponseDto(Instant.now().minusSeconds(3600000));
         Page<Post> userPostsPage = buildPostsPage();
         List<PostResponseDto> postResponseDtos = new ArrayList<>(List.of(postDto));
 
         when(postRepository.findAllByAuthorId(AUTHOR_ID, pageRequest)).thenReturn(userPostsPage);
         when(postMapper.toListDtos(userPostsPage.getContent())).thenReturn(postResponseDtos);
+        when(postMapper.buildPageable(request)).thenReturn(pageRequest);
 
-        UserPostsPageResponseDto result = postService.getUserPosts(AUTHOR_ID, PAGE, SIZE, DEFAULT_SORT_FIELD);
+        UserPostsPageResponseDto result = postService.getUserPosts(AUTHOR_ID, request);
 
         assertThat(result.getPosts()).isEqualTo(postResponseDtos);
         verify(userClient).checkUserExists(AUTHOR_ID);
@@ -111,7 +110,7 @@ class PostServiceImplTest {
                 .checkUserExists(AUTHOR_ID);
 
         Exception exception = assertThrows(NotFoundException.class, () ->
-                postService.getUserPosts(AUTHOR_ID, PAGE, SIZE, DEFAULT_SORT_FIELD));
+                postService.getUserPosts(AUTHOR_ID, buildPostsSearchRequest()));
 
         assertEquals(USER_NOT_FOUND_EX, exception.getMessage());
     }
@@ -132,7 +131,6 @@ class PostServiceImplTest {
 
         verify(userClient).checkUserExists(AUTHOR_ID);
         verify(rateLimiterService).validatePostCreationLimit(AUTHOR_ID);
-        verify(postCacheService).evictUserPostsCacheByUserId(AUTHOR_ID);
     }
 
     @Test
@@ -171,7 +169,6 @@ class PostServiceImplTest {
         PostResponseDto result = postService.updatePost(POST_ID, postUpdateDto, AUTHOR_ID);
 
         assertThat(result).isEqualTo(postDto);
-        verify(postCacheService).evictUserPostsCacheByUserId(AUTHOR_ID);
     }
 
     @Test
@@ -210,7 +207,6 @@ class PostServiceImplTest {
         PostResponseDto result = postService.deletePost(POST_ID, AUTHOR_ID);
 
         assertThat(result).isEqualTo(postDto);
-        verify(postCacheService).evictUserPostsCacheByUserId(AUTHOR_ID);
     }
 
     @Test
@@ -256,6 +252,14 @@ class PostServiceImplTest {
         static PostCreateDto buildPostCreateDto() {
             return PostCreateDto.builder()
                     .content(CONTENT)
+                    .build();
+        }
+
+        static PostsSearchRequest buildPostsSearchRequest() {
+            return PostsSearchRequest.builder()
+                    .page(PAGE)
+                    .size(SIZE)
+                    .sortBy(DEFAULT_SORT_FIELD.getFieldName())
                     .build();
         }
 

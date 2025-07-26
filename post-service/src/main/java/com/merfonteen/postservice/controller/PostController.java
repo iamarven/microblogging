@@ -4,6 +4,7 @@ import com.merfonteen.dtos.FileUploadResponse;
 import com.merfonteen.postservice.dto.PostCreateDto;
 import com.merfonteen.postservice.dto.PostResponseDto;
 import com.merfonteen.postservice.dto.PostUpdateDto;
+import com.merfonteen.postservice.dto.PostsSearchRequest;
 import com.merfonteen.postservice.dto.UserPostsPageResponseDto;
 import com.merfonteen.postservice.model.enums.PostSortField;
 import com.merfonteen.postservice.service.PostMediaService;
@@ -21,8 +22,8 @@ import java.util.List;
 @RestController
 public class PostController {
 
-    private final PostMediaService postMediaService;
     private final PostService postService;
+    private final PostMediaService postMediaService;
 
     public PostController(PostService postService, PostMediaService postMediaService) {
         this.postService = postService;
@@ -46,11 +47,8 @@ public class PostController {
 
     @GetMapping("/users/{userId}")
     public ResponseEntity<UserPostsPageResponseDto> getUserPosts(@PathVariable("userId") Long userId,
-                                                                 @RequestParam(defaultValue = "0") @Min(0) int page,
-                                                                 @RequestParam(defaultValue = "10")@Min(1) int size,
-                                                                 @RequestParam(defaultValue = "createdAt") String sortBy) {
-        PostSortField postSortField = PostSortField.from(sortBy);
-        return ResponseEntity.ok(postService.getUserPosts(userId, page, size, postSortField));
+                                                                 PostsSearchRequest request) {
+        return ResponseEntity.ok(postService.getUserPosts(userId, request));
     }
 
     @GetMapping("/users/{id}/count")

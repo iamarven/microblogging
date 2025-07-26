@@ -9,7 +9,6 @@ import com.merfonteen.postservice.dto.UserPostsPageResponseDto;
 import com.merfonteen.postservice.kafkaProducer.PostEventProducer;
 import com.merfonteen.postservice.model.Post;
 import com.merfonteen.postservice.repository.PostRepository;
-import com.merfonteen.postservice.service.PostCacheService;
 import com.merfonteen.postservice.service.impl.config.RestTemplateConfig;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,7 +20,12 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.Instant;
@@ -42,9 +46,6 @@ public class RedisCacheIntegrationTests extends AbstractRedisIntegrationTest {
 
     @Autowired
     private PostRepository postRepository;
-
-    @Autowired
-    private PostCacheService postCacheService;
 
     @Autowired
     private TestRestTemplate testRestTemplate;

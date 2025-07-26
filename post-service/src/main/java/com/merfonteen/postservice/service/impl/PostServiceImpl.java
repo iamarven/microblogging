@@ -7,13 +7,12 @@ import com.merfonteen.postservice.client.UserClient;
 import com.merfonteen.postservice.dto.PostCreateDto;
 import com.merfonteen.postservice.dto.PostResponseDto;
 import com.merfonteen.postservice.dto.PostUpdateDto;
+import com.merfonteen.postservice.dto.PostsSearchRequest;
 import com.merfonteen.postservice.dto.UserPostsPageResponseDto;
 import com.merfonteen.postservice.kafkaProducer.PostEventProducer;
 import com.merfonteen.postservice.mapper.PostMapper;
 import com.merfonteen.postservice.model.Post;
-import com.merfonteen.postservice.model.enums.PostSortField;
 import com.merfonteen.postservice.repository.PostRepository;
-import com.merfonteen.postservice.service.PostCacheService;
 import com.merfonteen.postservice.service.PostService;
 import com.merfonteen.postservice.service.RateLimiterService;
 import com.merfonteen.postservice.util.AuthUtil;
@@ -23,11 +22,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -36,21 +34,19 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Primary
 @RequiredArgsConstructor
-@Slf4j
 @Service
 public class PostServiceImpl implements PostService {
-
+    private final UserClient userClient;
     private final PostMapper postMapper;
     private final PostRepository postRepository;
-    private final UserClient userClient;
-    private final RateLimiterService rateLimiterService;
-    private final PostCacheService postCacheService;
     private final PostEventProducer postEventProducer;
+    private final RateLimiterService rateLimiterService;
     private final StringRedisTemplate stringRedisTemplate;
 
-    @Cacheable(value = "post-by-id", key = "#id", unless = "#result == null")
+    @Cacheable(value = "post-by-id", key = "#id")
     @Override
     public PostResponseDto getPostById(Long id) {
         Post post = findPostByIdOrThrowException(id);
@@ -60,27 +56,20 @@ public class PostServiceImpl implements PostService {
 
     @Override
     public Long getPostAuthorId(Long postId) {
-        Optional<Post> post = postRepository.findById(postId);
-        if(post.isEmpty()) {
-            throw new NotFoundException(String.format("Post with id '%d' not found", postId));
-        }
-        return post.get().getAuthorId();
+        Post post = findPostByIdOrThrowException(postId);
+        return post.getAuthorId();
     }
 
-    @Cacheable(value = "user-posts", key = "#userId + ':' + #page + ':' + #size")
+    @Cacheable(value = "user-posts", key = "#userId")
     @Override
-    public UserPostsPageResponseDto getUserPosts(Long userId, int page, int size, PostSortField sortField) {
+    public UserPostsPageResponseDto getUserPosts(Long userId, PostsSearchRequest request) {
         checkUserExistsByUserClient(userId);
 
-        if (size > 100) {
-            size = 100;
-        }
-
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, sortField.getFieldName()));
+        Pageable pageable = postMapper.buildPageable(request);
         Page<Post> userPostsPage = postRepository.findAllByAuthorId(userId, pageable);
         List<PostResponseDto> userPostsDto = postMapper.toListDtos(userPostsPage.getContent());
 
-        log.info("Getting posts for user '{}', page={}, size={}, sortBy={}", userId, page, size, sortField.getFieldName());
+        log.info("Found {} posts for user '{}'", userPostsDto.size(), userId);
 
         return UserPostsPageResponseDto.builder()
                 .posts(userPostsDto)
@@ -96,7 +85,7 @@ public class PostServiceImpl implements PostService {
         String cacheKey = "post:count:user:" + userId;
         String cachedValue = stringRedisTemplate.opsForValue().get(cacheKey);
 
-        if(cachedValue != null) {
+        if (cachedValue != null) {
             return Long.parseLong(cachedValue);
         }
 
@@ -107,6 +96,7 @@ public class PostServiceImpl implements PostService {
         return numberOfPostsFromDb;
     }
 
+    @CacheEvict(value = "user-posts", key = "#currentUserId")
     @Transactional
     @Override
     public PostResponseDto createPost(Long currentUserId, PostCreateDto createDto) {
@@ -124,14 +114,16 @@ public class PostServiceImpl implements PostService {
         log.info("Post with id '{}' successfully created by user '{}'", post.getId(), currentUserId);
 
         stringRedisTemplate.opsForValue().increment("post:count:user:" + currentUserId);
-
         postEventProducer.sendPostCreatedEvent(new PostCreatedEvent(post.getId(), currentUserId, Instant.now()));
-        postCacheService.evictUserPostsCacheByUserId(currentUserId);
 
         return postMapper.toDto(post);
     }
 
-    @CacheEvict(value = "post-by-id", key = "#id")
+    @Caching(
+            evict = {
+                    @CacheEvict(value = "post-by-id", key = "#id"),
+                    @CacheEvict(value = "user-posts", key = "#currentUserId")
+            })
     @Transactional
     @Override
     public PostResponseDto updatePost(Long id, PostUpdateDto updateDto, Long currentUserId) {
@@ -144,11 +136,14 @@ public class PostServiceImpl implements PostService {
         postRepository.save(postToUpdate);
         log.info("Post with id '{}' successfully updated by user with id: '{}'", id, currentUserId);
 
-        postCacheService.evictUserPostsCacheByUserId(currentUserId);
         return postMapper.toDto(postToUpdate);
     }
 
-    @CacheEvict(value = "post-by-id", key = "#id")
+    @Caching(
+            evict = {
+                    @CacheEvict(value = "post-by-id", key = "#id"),
+                    @CacheEvict(value = "user-posts", key = "#currentUserId")
+            })
     @Transactional
     @Override
     public PostResponseDto deletePost(Long id, Long currentUserId) {
@@ -161,11 +156,10 @@ public class PostServiceImpl implements PostService {
         postEventProducer.sendPostRemovedEvent(new PostRemovedEvent(id, currentUserId));
 
         String cacheKey = "post:count:user:" + currentUserId;
-        if(Boolean.TRUE.equals(stringRedisTemplate.hasKey(cacheKey))) {
+        if (stringRedisTemplate.hasKey(cacheKey)) {
             stringRedisTemplate.opsForValue().decrement(cacheKey);
         }
 
-        postCacheService.evictUserPostsCacheByUserId(currentUserId);
         return postMapper.toDto(postToDelete);
     }
 

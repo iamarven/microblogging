@@ -21,17 +21,19 @@ import java.time.Duration;
 @Configuration
 public class RedisConfig {
 
+    private static final Integer TTL_IN_MINUTES = 15;
+
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
-        template.setConnectionFactory(connectionFactory);
 
+        template.setConnectionFactory(connectionFactory);
         template.setKeySerializer(new StringRedisSerializer());
         template.setHashKeySerializer(new StringRedisSerializer());
         template.setValueSerializer(redisValueSerializer());
         template.setHashValueSerializer(redisValueSerializer());
-
         template.afterPropertiesSet();
+
         return template;
     }
 
@@ -52,7 +54,7 @@ public class RedisConfig {
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
-                .entryTtl(Duration.ofMinutes(5))
+                .entryTtl(Duration.ofMinutes(TTL_IN_MINUTES))
                 .serializeKeysWith(
                         RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
                 .serializeValuesWith(
@@ -62,5 +64,4 @@ public class RedisConfig {
                 .cacheDefaults(config)
                 .build();
     }
-
 }
