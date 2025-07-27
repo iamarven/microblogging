@@ -2,7 +2,7 @@
 
 A microservices application. A mini-social network with basic functionality: creating posts, subscribing to users, likes/coments, creating a personal news feed.
 
-![schema_svg](https://github.com/user-attachments/assets/b0259ada-5cc6-4b55-911d-d317ff6e6e13)
+<img width="1713" height="1667" alt="schema" src="https://github.com/user-attachments/assets/d4b2230d-f24c-4c2c-83e7-c3d7c4ac0f72" />
 
 ## Tech stack
 
