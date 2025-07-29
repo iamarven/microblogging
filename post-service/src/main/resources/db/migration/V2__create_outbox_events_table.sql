@@ -7,4 +7,4 @@ CREATE TABLE post_service.outbox_events
     payload JSONB NOT NULL,
     sent BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-)
+);
