@@ -8,9 +8,12 @@ import com.merfonteen.postservice.dto.PostResponse;
 import com.merfonteen.postservice.dto.PostUpdateRequest;
 import com.merfonteen.postservice.dto.PostsSearchRequest;
 import com.merfonteen.postservice.dto.UserPostsPageResponse;
+import com.merfonteen.postservice.mapper.OutboxEventMapper;
 import com.merfonteen.postservice.mapper.PostMapper;
 import com.merfonteen.postservice.model.Post;
+import com.merfonteen.postservice.model.enums.OutboxEventType;
 import com.merfonteen.postservice.model.enums.PostSortField;
+import com.merfonteen.postservice.repository.OutboxEventRepository;
 import com.merfonteen.postservice.repository.PostRepository;
 import com.merfonteen.postservice.service.RateLimiterService;
 import com.merfonteen.postservice.util.PostValidator;
@@ -53,6 +56,12 @@ class PostServiceImplTest {
 
     @Mock
     private PostValidator postValidator;
+
+    @Mock
+    private OutboxEventMapper outboxEventMapper;
+
+    @Mock
+    private OutboxEventRepository outboxEventRepository;
 
     @InjectMocks
     private PostServiceImpl postService;
@@ -103,6 +112,7 @@ class PostServiceImplTest {
 
         when(postRepository.save(any(Post.class))).thenReturn(post);
         when(postMapper.toDto(any(Post.class))).thenReturn(expected);
+//        when(outboxEventMapper.mapToJson(post, OutboxEventType.POST_CREATED)).thenReturn();
 
         PostResponse result = postService.createPost(AUTHOR_ID, postCreateRequest);
 
