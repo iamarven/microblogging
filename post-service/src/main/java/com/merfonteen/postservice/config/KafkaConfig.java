@@ -31,6 +31,7 @@ public class KafkaConfig {
         config.put(ProducerConfig.LINGER_MS_CONFIG, "0");
         config.put(ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, "30000");
         config.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, 5);
+        config.put(JsonSerializer.ADD_TYPE_INFO_HEADERS, "false");
         return new DefaultKafkaProducerFactory<>(config);
     }
 

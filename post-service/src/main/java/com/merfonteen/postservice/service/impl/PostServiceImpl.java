@@ -7,10 +7,13 @@ import com.merfonteen.postservice.dto.PostResponse;
 import com.merfonteen.postservice.dto.PostUpdateRequest;
 import com.merfonteen.postservice.dto.PostsSearchRequest;
 import com.merfonteen.postservice.dto.UserPostsPageResponse;
+import com.merfonteen.postservice.mapper.OutboxEventMapper;
 import com.merfonteen.postservice.mapper.PostMapper;
+import com.merfonteen.postservice.model.OutboxEvent;
 import com.merfonteen.postservice.model.Post;
+import com.merfonteen.postservice.model.enums.OutboxEventType;
+import com.merfonteen.postservice.repository.OutboxEventRepository;
 import com.merfonteen.postservice.repository.PostRepository;
-import com.merfonteen.postservice.service.PostPublisher;
 import com.merfonteen.postservice.service.PostService;
 import com.merfonteen.postservice.service.RateLimiterService;
 import com.merfonteen.postservice.util.AuthUtil;
@@ -38,10 +41,11 @@ import java.util.Optional;
 public class PostServiceImpl implements PostService {
     private final PostMapper postMapper;
     private final PostValidator postValidator;
-    private final PostPublisher postPublisher;
     private final PostRepository postRepository;
     private final StringRedisCounter redisCounter;
+    private final OutboxEventMapper outboxEventMapper;
     private final RateLimiterService rateLimiterService;
+    private final OutboxEventRepository outboxEventRepository;
 
     @Cacheable(value = CacheNames.POST_BY_ID, key = "#id")
     @Override
@@ -100,8 +104,18 @@ public class PostServiceImpl implements PostService {
         Post savedPost = postRepository.save(post);
         log.info("Post with id '{}' successfully created by user '{}'", savedPost.getId(), currentUserId);
 
+        OutboxEvent outboxEvent = OutboxEvent.builder()
+                .aggregateType("Post")
+                .aggregateId(savedPost.getId())
+                .eventType(OutboxEventType.POST_CREATED)
+                .sent(false)
+                .payload(outboxEventMapper.mapToJson(savedPost, OutboxEventType.POST_CREATED))
+                .createdAt(Instant.now())
+                .build();
+
+        outboxEventRepository.save(outboxEvent);
+
         redisCounter.incrementCounter(currentUserId);
-        postPublisher.publishPostCreatedEvent(savedPost.getId(), currentUserId);
 
         return postMapper.toDto(savedPost);
     }
@@ -140,7 +154,17 @@ public class PostServiceImpl implements PostService {
         postRepository.deleteById(postToDelete.getId());
         log.info("Post with id '{}' successfully deleted by user '{}'", id, currentUserId);
 
-        postPublisher.publishPostRemovedEvent(id, currentUserId);
+        OutboxEvent outboxEvent = OutboxEvent.builder()
+                .aggregateType("Post")
+                .aggregateId(postToDelete.getId())
+                .eventType(OutboxEventType.POST_REMOVED)
+                .sent(false)
+                .payload(outboxEventMapper.mapToJson(postToDelete, OutboxEventType.POST_REMOVED))
+                .createdAt(Instant.now())
+                .build();
+
+        outboxEventRepository.save(outboxEvent);
+
         redisCounter.decrementCounter(currentUserId);
     }
 

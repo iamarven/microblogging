@@ -3,7 +3,6 @@ package com.merfonteen.postservice.service.impl;
 import com.merfonteen.exceptions.ForbiddenException;
 import com.merfonteen.exceptions.NotFoundException;
 import com.merfonteen.exceptions.TooManyRequestsException;
-import com.merfonteen.postservice.client.UserClient;
 import com.merfonteen.postservice.dto.PostCreateRequest;
 import com.merfonteen.postservice.dto.PostResponse;
 import com.merfonteen.postservice.dto.PostUpdateRequest;
@@ -13,7 +12,6 @@ import com.merfonteen.postservice.mapper.PostMapper;
 import com.merfonteen.postservice.model.Post;
 import com.merfonteen.postservice.model.enums.PostSortField;
 import com.merfonteen.postservice.repository.PostRepository;
-import com.merfonteen.postservice.service.PostPublisher;
 import com.merfonteen.postservice.service.RateLimiterService;
 import com.merfonteen.postservice.util.PostValidator;
 import com.merfonteen.postservice.util.StringRedisCounter;
@@ -46,9 +44,6 @@ class PostServiceImplTest {
 
     @Mock
     private PostRepository postRepository;
-
-    @Mock
-    private PostPublisher postPublisher;
 
     @Mock
     private StringRedisCounter redisCounter;
@@ -114,7 +109,6 @@ class PostServiceImplTest {
         assertThat(result).isEqualTo(expected);
 
         verify(rateLimiterService).validatePostCreationLimit(AUTHOR_ID);
-        verify(postPublisher).publishPostCreatedEvent(POST_ID, AUTHOR_ID);
     }
 
     @Test
@@ -176,7 +170,6 @@ class PostServiceImplTest {
 
         postService.deletePost(POST_ID, AUTHOR_ID);
         verify(postRepository).deleteById(POST_ID);
-        verify(postPublisher).publishPostRemovedEvent(POST_ID, AUTHOR_ID);
     }
 
     @Test

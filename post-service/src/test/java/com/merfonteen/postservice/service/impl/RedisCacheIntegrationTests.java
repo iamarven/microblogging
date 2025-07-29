@@ -6,7 +6,7 @@ import com.merfonteen.postservice.dto.PostCreateRequest;
 import com.merfonteen.postservice.dto.PostResponse;
 import com.merfonteen.postservice.dto.PostUpdateRequest;
 import com.merfonteen.postservice.dto.UserPostsPageResponse;
-import com.merfonteen.postservice.kafkaProducer.PostEventProducer;
+import com.merfonteen.postservice.kafka.PostEventProducer;
 import com.merfonteen.postservice.model.Post;
 import com.merfonteen.postservice.repository.PostRepository;
 import com.merfonteen.postservice.service.impl.config.RestTemplateConfig;
