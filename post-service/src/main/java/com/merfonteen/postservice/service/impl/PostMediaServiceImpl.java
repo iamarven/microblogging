@@ -8,11 +8,12 @@ import com.merfonteen.postservice.model.Post;
 import com.merfonteen.postservice.model.PostMedia;
 import com.merfonteen.postservice.repository.PostMediaRepository;
 import com.merfonteen.postservice.repository.PostRepository;
-import com.merfonteen.postservice.service.PostCacheService;
 import com.merfonteen.postservice.service.PostMediaService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -29,7 +30,6 @@ public class PostMediaServiceImpl implements PostMediaService {
 
     private final MediaClient mediaClient;
     private final PostRepository postRepository;
-    private final PostCacheService postCacheService;
     private final PostMediaRepository postMediaRepository;
 
     @Override
@@ -40,6 +40,11 @@ public class PostMediaServiceImpl implements PostMediaService {
                 .toList();
     }
 
+    @Caching(
+            evict = {
+                    @CacheEvict(value = "post-by-id", key = "#postId"),
+                    @CacheEvict(value = "user-posts", key = "#currentUserId")
+            })
     @Transactional
     @Override
     public FileUploadResponse uploadMediaToPost(Long postId, MultipartFile file, Long currentUserId) {
@@ -58,11 +63,14 @@ public class PostMediaServiceImpl implements PostMediaService {
         postMediaRepository.save(postMedia);
         log.info("Post media file was saved successfully: {}", postMedia);
 
-        postCacheService.evictUserPostsCacheByUserId(currentUserId);
-
         return fileUploadResponse;
     }
 
+    @Caching(
+            evict = {
+                    @CacheEvict(value = "post-by-id", key = "#postId"),
+                    @CacheEvict(value = "user-posts", key = "#currentUserId")
+            })
     @Transactional
     @Override
     public void deletePostMedia(Long postId, String fileType, String fileName, Long currentUserId) {
@@ -78,8 +86,6 @@ public class PostMediaServiceImpl implements PostMediaService {
         mediaClient.deletePostMedia(fileType, fileName);
         postMediaRepository.delete(postMediaFileToDelete);
         log.info("Post media file was successfully deleted: '{}', '{}'", fileType, fileName);
-
-        postCacheService.evictUserPostsCacheByUserId(currentUserId);
     }
 
     private Post findPostByIdOrThrowException(Long postId) {

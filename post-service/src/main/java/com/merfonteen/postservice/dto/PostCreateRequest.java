@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 @Data
-public class PostCreateDto {
+public class PostCreateRequest {
     @Size(max = 5000)
     @NotBlank(message = "Content is required")
     private String content;

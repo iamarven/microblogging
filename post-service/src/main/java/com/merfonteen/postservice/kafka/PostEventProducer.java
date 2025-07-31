@@ -1,4 +1,4 @@
-package com.merfonteen.postservice.kafkaProducer;
+package com.merfonteen.postservice.kafka;
 
 import com.merfonteen.kafkaEvents.PostCreatedEvent;
 import com.merfonteen.kafkaEvents.PostRemovedEvent;

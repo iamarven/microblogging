@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 @Data
-public class PostUpdateDto {
+public class PostUpdateRequest {
     @Size(max = 5000)
     private String content;
 }

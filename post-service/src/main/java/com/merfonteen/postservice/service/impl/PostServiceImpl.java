@@ -1,58 +1,55 @@
 package com.merfonteen.postservice.service.impl;
 
 import com.merfonteen.exceptions.NotFoundException;
-import com.merfonteen.kafkaEvents.PostCreatedEvent;
-import com.merfonteen.kafkaEvents.PostRemovedEvent;
-import com.merfonteen.postservice.client.UserClient;
-import com.merfonteen.postservice.dto.PostCreateDto;
-import com.merfonteen.postservice.dto.PostResponseDto;
-import com.merfonteen.postservice.dto.PostUpdateDto;
-import com.merfonteen.postservice.dto.UserPostsPageResponseDto;
-import com.merfonteen.postservice.kafkaProducer.PostEventProducer;
+import com.merfonteen.postservice.config.CacheNames;
+import com.merfonteen.postservice.dto.PostCreateRequest;
+import com.merfonteen.postservice.dto.PostResponse;
+import com.merfonteen.postservice.dto.PostUpdateRequest;
+import com.merfonteen.postservice.dto.PostsSearchRequest;
+import com.merfonteen.postservice.dto.UserPostsPageResponse;
+import com.merfonteen.postservice.mapper.OutboxEventMapper;
 import com.merfonteen.postservice.mapper.PostMapper;
+import com.merfonteen.postservice.model.OutboxEvent;
 import com.merfonteen.postservice.model.Post;
-import com.merfonteen.postservice.model.enums.PostSortField;
+import com.merfonteen.postservice.model.enums.OutboxEventType;
+import com.merfonteen.postservice.repository.OutboxEventRepository;
 import com.merfonteen.postservice.repository.PostRepository;
-import com.merfonteen.postservice.service.PostCacheService;
 import com.merfonteen.postservice.service.PostService;
 import com.merfonteen.postservice.service.RateLimiterService;
 import com.merfonteen.postservice.util.AuthUtil;
-import feign.FeignException;
+import com.merfonteen.postservice.util.PostValidator;
+import com.merfonteen.postservice.util.StringRedisCounter;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Primary
 @RequiredArgsConstructor
-@Slf4j
 @Service
 public class PostServiceImpl implements PostService {
-
     private final PostMapper postMapper;
+    private final PostValidator postValidator;
     private final PostRepository postRepository;
-    private final UserClient userClient;
+    private final StringRedisCounter redisCounter;
+    private final OutboxEventMapper outboxEventMapper;
     private final RateLimiterService rateLimiterService;
-    private final PostCacheService postCacheService;
-    private final PostEventProducer postEventProducer;
-    private final StringRedisTemplate stringRedisTemplate;
+    private final OutboxEventRepository outboxEventRepository;
 
-    @Cacheable(value = "post-by-id", key = "#id", unless = "#result == null")
+    @Cacheable(value = CacheNames.POST_BY_ID, key = "#id")
     @Override
-    public PostResponseDto getPostById(Long id) {
+    public PostResponse getPostById(Long id) {
         Post post = findPostByIdOrThrowException(id);
         log.info("Getting post with id '{}'", id);
         return postMapper.toDto(post);
@@ -60,122 +57,115 @@ public class PostServiceImpl implements PostService {
 
     @Override
     public Long getPostAuthorId(Long postId) {
-        Optional<Post> post = postRepository.findById(postId);
-        if(post.isEmpty()) {
-            throw new NotFoundException(String.format("Post with id '%d' not found", postId));
-        }
-        return post.get().getAuthorId();
+        Post post = findPostByIdOrThrowException(postId);
+        return post.getAuthorId();
     }
 
-    @Cacheable(value = "user-posts", key = "#userId + ':' + #page + ':' + #size")
+    @Cacheable(value = CacheNames.USER_POSTS, key = "#userId")
     @Override
-    public UserPostsPageResponseDto getUserPosts(Long userId, int page, int size, PostSortField sortField) {
-        checkUserExistsByUserClient(userId);
+    public UserPostsPageResponse getUserPosts(Long userId, PostsSearchRequest request) {
+        postValidator.checkUserExists(userId);
 
-        if (size > 100) {
-            size = 100;
-        }
-
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, sortField.getFieldName()));
+        Pageable pageable = postMapper.buildPageable(request);
         Page<Post> userPostsPage = postRepository.findAllByAuthorId(userId, pageable);
-        List<PostResponseDto> userPostsDto = postMapper.toListDtos(userPostsPage.getContent());
+        List<PostResponse> userPostsDto = postMapper.toListDtos(userPostsPage.getContent());
 
-        log.info("Getting posts for user '{}', page={}, size={}, sortBy={}", userId, page, size, sortField.getFieldName());
+        log.info("Found {} posts for user '{}'", userPostsDto.size(), userId);
 
-        return UserPostsPageResponseDto.builder()
-                .posts(userPostsDto)
-                .currentPage(userPostsPage.getNumber())
-                .totalPages(userPostsPage.getTotalPages())
-                .totalElements(userPostsPage.getTotalElements())
-                .isLastPage(userPostsPage.isLast())
-                .build();
+        return postMapper.buildUserPostsPageResponse(userPostsDto, userPostsPage);
     }
 
     @Override
     public Long getPostCount(Long userId) {
-        String cacheKey = "post:count:user:" + userId;
-        String cachedValue = stringRedisTemplate.opsForValue().get(cacheKey);
+        String cachedValue = redisCounter.getCachedValue(userId);
 
-        if(cachedValue != null) {
+        if (cachedValue != null) {
             return Long.parseLong(cachedValue);
         }
 
         Long numberOfPostsFromDb = postRepository.countByAuthorId(userId);
-
-        stringRedisTemplate.opsForValue().set(cacheKey, String.valueOf(numberOfPostsFromDb), Duration.ofMinutes(10));
+        redisCounter.putCounter(userId, numberOfPostsFromDb);
 
         return numberOfPostsFromDb;
     }
 
+    @CacheEvict(value = CacheNames.USER_POSTS, key = "#currentUserId")
     @Transactional
     @Override
-    public PostResponseDto createPost(Long currentUserId, PostCreateDto createDto) {
-        checkUserExistsByUserClient(currentUserId);
-
+    public PostResponse createPost(Long currentUserId, PostCreateRequest request) {
         rateLimiterService.validatePostCreationLimit(currentUserId);
 
         Post post = Post.builder()
                 .authorId(currentUserId)
-                .content(createDto.getContent())
+                .content(request.getContent())
                 .createdAt(Instant.now())
                 .build();
 
-        postRepository.save(post);
-        log.info("Post with id '{}' successfully created by user '{}'", post.getId(), currentUserId);
+        Post savedPost = postRepository.save(post);
+        log.info("Post with id '{}' successfully created by user '{}'", savedPost.getId(), currentUserId);
 
-        stringRedisTemplate.opsForValue().increment("post:count:user:" + currentUserId);
+        OutboxEvent outboxEvent = OutboxEvent.builder()
+                .aggregateType("Post")
+                .aggregateId(savedPost.getId())
+                .eventType(OutboxEventType.POST_CREATED)
+                .sent(false)
+                .payload(outboxEventMapper.mapToJson(savedPost, OutboxEventType.POST_CREATED))
+                .createdAt(Instant.now())
+                .build();
 
-        postEventProducer.sendPostCreatedEvent(new PostCreatedEvent(post.getId(), currentUserId, Instant.now()));
-        postCacheService.evictUserPostsCacheByUserId(currentUserId);
+        outboxEventRepository.save(outboxEvent);
 
-        return postMapper.toDto(post);
+        redisCounter.incrementCounter(currentUserId);
+
+        return postMapper.toDto(savedPost);
     }
 
-    @CacheEvict(value = "post-by-id", key = "#id")
+    @Caching(
+            evict = {
+                    @CacheEvict(value = CacheNames.POST_BY_ID, key = "#id"),
+                    @CacheEvict(value = CacheNames.USER_POSTS, key = "#currentUserId")
+            })
     @Transactional
     @Override
-    public PostResponseDto updatePost(Long id, PostUpdateDto updateDto, Long currentUserId) {
+    public PostResponse updatePost(Long id, PostUpdateRequest updateDto, Long currentUserId) {
         Post postToUpdate = findPostByIdOrThrowException(id);
         AuthUtil.requireSelfAccess(postToUpdate.getAuthorId(), currentUserId);
 
         Optional.ofNullable(updateDto.getContent()).ifPresent(postToUpdate::setContent);
         postToUpdate.setUpdatedAt(Instant.now());
 
-        postRepository.save(postToUpdate);
+        Post updatedPost = postRepository.save(postToUpdate);
         log.info("Post with id '{}' successfully updated by user with id: '{}'", id, currentUserId);
 
-        postCacheService.evictUserPostsCacheByUserId(currentUserId);
-        return postMapper.toDto(postToUpdate);
+        return postMapper.toDto(updatedPost);
     }
 
-    @CacheEvict(value = "post-by-id", key = "#id")
+    @Caching(
+            evict = {
+                    @CacheEvict(value = CacheNames.POST_BY_ID, key = "#id"),
+                    @CacheEvict(value = CacheNames.USER_POSTS, key = "#currentUserId")
+            })
     @Transactional
     @Override
-    public PostResponseDto deletePost(Long id, Long currentUserId) {
+    public void deletePost(Long id, Long currentUserId) {
         Post postToDelete = findPostByIdOrThrowException(id);
         AuthUtil.requireSelfAccess(postToDelete.getAuthorId(), currentUserId);
 
         postRepository.deleteById(postToDelete.getId());
         log.info("Post with id '{}' successfully deleted by user '{}'", id, currentUserId);
 
-        postEventProducer.sendPostRemovedEvent(new PostRemovedEvent(id, currentUserId));
+        OutboxEvent outboxEvent = OutboxEvent.builder()
+                .aggregateType("Post")
+                .aggregateId(postToDelete.getId())
+                .eventType(OutboxEventType.POST_REMOVED)
+                .sent(false)
+                .payload(outboxEventMapper.mapToJson(postToDelete, OutboxEventType.POST_REMOVED))
+                .createdAt(Instant.now())
+                .build();
 
-        String cacheKey = "post:count:user:" + currentUserId;
-        if(Boolean.TRUE.equals(stringRedisTemplate.hasKey(cacheKey))) {
-            stringRedisTemplate.opsForValue().decrement(cacheKey);
-        }
+        outboxEventRepository.save(outboxEvent);
 
-        postCacheService.evictUserPostsCacheByUserId(currentUserId);
-        return postMapper.toDto(postToDelete);
-    }
-
-    private void checkUserExistsByUserClient(Long userId) {
-        try {
-            userClient.checkUserExists(userId);
-        } catch (FeignException.NotFound e) {
-            log.error("User with id '{}' not found", userId);
-            throw new NotFoundException(String.format("User with id '%d' not found", userId));
-        }
+        redisCounter.decrementCounter(currentUserId);
     }
 
     private Post findPostByIdOrThrowException(Long id) {

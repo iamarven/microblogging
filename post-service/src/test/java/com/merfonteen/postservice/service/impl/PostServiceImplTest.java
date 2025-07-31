@@ -3,19 +3,21 @@ package com.merfonteen.postservice.service.impl;
 import com.merfonteen.exceptions.ForbiddenException;
 import com.merfonteen.exceptions.NotFoundException;
 import com.merfonteen.exceptions.TooManyRequestsException;
-import com.merfonteen.postservice.client.UserClient;
-import com.merfonteen.postservice.dto.PostCreateDto;
-import com.merfonteen.postservice.dto.PostResponseDto;
-import com.merfonteen.postservice.dto.PostUpdateDto;
-import com.merfonteen.postservice.dto.UserPostsPageResponseDto;
-import com.merfonteen.postservice.kafkaProducer.PostEventProducer;
+import com.merfonteen.postservice.dto.PostCreateRequest;
+import com.merfonteen.postservice.dto.PostResponse;
+import com.merfonteen.postservice.dto.PostUpdateRequest;
+import com.merfonteen.postservice.dto.PostsSearchRequest;
+import com.merfonteen.postservice.dto.UserPostsPageResponse;
+import com.merfonteen.postservice.mapper.OutboxEventMapper;
 import com.merfonteen.postservice.mapper.PostMapper;
 import com.merfonteen.postservice.model.Post;
+import com.merfonteen.postservice.model.enums.OutboxEventType;
 import com.merfonteen.postservice.model.enums.PostSortField;
+import com.merfonteen.postservice.repository.OutboxEventRepository;
 import com.merfonteen.postservice.repository.PostRepository;
-import com.merfonteen.postservice.service.PostCacheService;
 import com.merfonteen.postservice.service.RateLimiterService;
-import feign.FeignException;
+import com.merfonteen.postservice.util.PostValidator;
+import com.merfonteen.postservice.util.StringRedisCounter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -25,8 +27,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -43,28 +43,25 @@ import static org.mockito.Mockito.*;
 class PostServiceImplTest {
 
     @Mock
-    private UserClient userClient;
-
-    @Mock
     private PostMapper postMapper;
 
     @Mock
     private PostRepository postRepository;
 
     @Mock
+    private StringRedisCounter redisCounter;
+
+    @Mock
     private RateLimiterService rateLimiterService;
 
     @Mock
-    private PostCacheService postCacheService;
+    private PostValidator postValidator;
 
     @Mock
-    private StringRedisTemplate stringRedisTemplate;
+    private OutboxEventMapper outboxEventMapper;
 
     @Mock
-    private PostEventProducer postEventProducer;
-
-    @Mock
-    private ValueOperations<String, String> valueOps;
+    private OutboxEventRepository outboxEventRepository;
 
     @InjectMocks
     private PostServiceImpl postService;
@@ -72,12 +69,12 @@ class PostServiceImplTest {
     @Test
     void testGetPostById_Success() {
         Post post = buildPost();
-        PostResponseDto expected = buildPostResponseDto(CONTENT);
+        PostResponse expected = buildPostResponseDto(CONTENT);
 
         when(postRepository.findById(POST_ID)).thenReturn(Optional.ofNullable(post));
         when(postMapper.toDto(post)).thenReturn(expected);
 
-        PostResponseDto result = postService.getPostById(POST_ID);
+        PostResponse result = postService.getPostById(POST_ID);
 
         assertThat(result).isEqualTo(expected);
     }
@@ -91,48 +88,36 @@ class PostServiceImplTest {
     @Test
     void testGetUserPosts_Success() {
         PageRequest pageRequest = buildPageRequest();
-        PostResponseDto postDto = buildPostResponseDto(Instant.now().minusSeconds(3600000));
+        PostsSearchRequest request = buildPostsSearchRequest();
+        PostResponse postDto = buildPostResponseDto(Instant.now().minusSeconds(3600000));
         Page<Post> userPostsPage = buildPostsPage();
-        List<PostResponseDto> postResponseDtos = new ArrayList<>(List.of(postDto));
+        List<PostResponse> postResponses = new ArrayList<>(List.of(postDto));
 
         when(postRepository.findAllByAuthorId(AUTHOR_ID, pageRequest)).thenReturn(userPostsPage);
-        when(postMapper.toListDtos(userPostsPage.getContent())).thenReturn(postResponseDtos);
+        when(postMapper.toListDtos(userPostsPage.getContent())).thenReturn(postResponses);
+        when(postMapper.buildPageable(request)).thenReturn(pageRequest);
+        when(postMapper.buildUserPostsPageResponse(postResponses, userPostsPage)).
+                thenReturn(buildUserPostsPageResponse(postResponses, userPostsPage));
 
-        UserPostsPageResponseDto result = postService.getUserPosts(AUTHOR_ID, PAGE, SIZE, DEFAULT_SORT_FIELD);
+        UserPostsPageResponse result = postService.getUserPosts(AUTHOR_ID, request);
 
-        assertThat(result.getPosts()).isEqualTo(postResponseDtos);
-        verify(userClient).checkUserExists(AUTHOR_ID);
-    }
-
-    @Test
-    void testGetUserPosts_WhenUserNotFound_ShouldThrowException() {
-        doThrow(FeignException.NotFound.class)
-                .when(userClient)
-                .checkUserExists(AUTHOR_ID);
-
-        Exception exception = assertThrows(NotFoundException.class, () ->
-                postService.getUserPosts(AUTHOR_ID, PAGE, SIZE, DEFAULT_SORT_FIELD));
-
-        assertEquals(USER_NOT_FOUND_EX, exception.getMessage());
+        assertThat(result.getPosts()).isEqualTo(postResponses);
     }
 
     @Test
     void testCreatePost_Success() {
-        PostCreateDto postCreateDto = buildPostCreateDto();
+        PostCreateRequest postCreateRequest = buildPostCreateDto();
         Post post = buildPost();
-        PostResponseDto expected = buildPostResponseDto(CONTENT);
+        PostResponse expected = buildPostResponseDto(CONTENT);
 
-        when(stringRedisTemplate.opsForValue()).thenReturn(valueOps);
         when(postRepository.save(any(Post.class))).thenReturn(post);
         when(postMapper.toDto(any(Post.class))).thenReturn(expected);
 
-        PostResponseDto result = postService.createPost(AUTHOR_ID, postCreateDto);
+        PostResponse result = postService.createPost(AUTHOR_ID, postCreateRequest);
 
         assertThat(result).isEqualTo(expected);
 
-        verify(userClient).checkUserExists(AUTHOR_ID);
         verify(rateLimiterService).validatePostCreationLimit(AUTHOR_ID);
-        verify(postCacheService).evictUserPostsCacheByUserId(AUTHOR_ID);
     }
 
     @Test
@@ -146,55 +131,42 @@ class PostServiceImplTest {
     }
 
     @Test
-    void testCreatePost_WhenUserNotFound_ShouldThrowException() {
-        doThrow(FeignException.NotFound.class)
-                .when(userClient)
-                .checkUserExists(AUTHOR_ID);
-
-        Exception exception = assertThrows(NotFoundException.class,
-                () -> postService.createPost(AUTHOR_ID, buildPostCreateDto()));
-
-        assertEquals(USER_NOT_FOUND_EX, exception.getMessage());
-    }
-
-    @Test
     void testUpdatePost_Success() {
-        PostUpdateDto postUpdateDto = buildPostUpdateDto();
+        PostUpdateRequest postUpdateRequest = buildPostUpdateDto();
         Post postToUpdate = buildPost();
         Post savedPost = buildUpdatedPost();
-        PostResponseDto postDto = buildPostResponseDto(UPDATED_CONTENT);
+        PostResponse postDto = buildPostResponseDto(UPDATED_CONTENT);
 
         when(postRepository.findById(POST_ID)).thenReturn(Optional.ofNullable(postToUpdate));
         when(postRepository.save(any(Post.class))).thenReturn(savedPost);
         when(postMapper.toDto(any(Post.class))).thenReturn(postDto);
 
-        PostResponseDto result = postService.updatePost(POST_ID, postUpdateDto, AUTHOR_ID);
+        PostResponse result = postService.updatePost(POST_ID, postUpdateRequest, AUTHOR_ID);
 
         assertThat(result).isEqualTo(postDto);
-        verify(postCacheService).evictUserPostsCacheByUserId(AUTHOR_ID);
     }
 
     @Test
     void testUpdatePost_WhenPostNotFound_ShouldThrowException() {
-        PostUpdateDto postUpdateDto = buildPostUpdateDto();
+        PostUpdateRequest postUpdateRequest = buildPostUpdateDto();
 
         when(postRepository.findById(POST_ID)).thenReturn(Optional.empty());
 
         Exception exception = assertThrows(NotFoundException.class,
-                () -> postService.updatePost(POST_ID, postUpdateDto, AUTHOR_ID));
+                () -> postService.updatePost(POST_ID, postUpdateRequest, AUTHOR_ID));
 
         assertEquals(POST_NOT_FOUND_EX, exception.getMessage());
     }
 
     @Test
     void testUpdatePost_WhenNotAllowed_ShouldThrowException() {
-        PostUpdateDto postUpdateDto = buildPostUpdateDto();
+        PostUpdateRequest postUpdateRequest = buildPostUpdateDto();
         Post postToUpdate = buildPostWithUnknownUser();
 
         when(postRepository.findById(POST_ID)).thenReturn(Optional.ofNullable(postToUpdate));
 
         Exception exception = assertThrows(ForbiddenException.class,
-                () -> postService.updatePost(POST_ID, postUpdateDto, AUTHOR_ID));
+                () -> postService.updatePost(POST_ID, postUpdateRequest, AUTHOR_ID));
 
         assertEquals(NOT_ALLOWED_EX, exception.getMessage());
     }
@@ -202,15 +174,11 @@ class PostServiceImplTest {
     @Test
     void testDeletePost_Success() {
         Post postToDelete = buildPost();
-        PostResponseDto postDto = buildPostResponseDto(CONTENT);
 
         when(postRepository.findById(POST_ID)).thenReturn(Optional.ofNullable(postToDelete));
-        when(postMapper.toDto(any(Post.class))).thenReturn(postDto);
 
-        PostResponseDto result = postService.deletePost(POST_ID, AUTHOR_ID);
-
-        assertThat(result).isEqualTo(postDto);
-        verify(postCacheService).evictUserPostsCacheByUserId(AUTHOR_ID);
+        postService.deletePost(POST_ID, AUTHOR_ID);
+        verify(postRepository).deleteById(POST_ID);
     }
 
     @Test
@@ -247,20 +215,37 @@ class PostServiceImplTest {
         static final String LIMIT_EX = "You have exceeded the allowed number of posts per minute";
         static final String NOT_ALLOWED_EX = "You are not allowed to modify this post";
         static final String POST_NOT_FOUND_EX = "Post with id '%d' not found".formatted(POST_ID);
-        static final String USER_NOT_FOUND_EX = "User with id '%d' not found".formatted(AUTHOR_ID);
 
         static PageRequest buildPageRequest() {
             return PageRequest.of(PAGE, SIZE, Sort.by(Sort.Direction.DESC, DEFAULT_SORT_FIELD.getFieldName()));
         }
 
-        static PostCreateDto buildPostCreateDto() {
-            return PostCreateDto.builder()
+        static UserPostsPageResponse buildUserPostsPageResponse(List<PostResponse> posts, Page<Post> page) {
+            return UserPostsPageResponse.builder()
+                    .posts(posts)
+                    .currentPage(page.getNumber())
+                    .totalPages(page.getTotalPages())
+                    .totalElements(page.getTotalElements())
+                    .isLastPage(page.isLast())
+                    .build();
+        }
+
+        static PostCreateRequest buildPostCreateDto() {
+            return PostCreateRequest.builder()
                     .content(CONTENT)
                     .build();
         }
 
-        static PostUpdateDto buildPostUpdateDto() {
-            return PostUpdateDto.builder()
+        static PostsSearchRequest buildPostsSearchRequest() {
+            return PostsSearchRequest.builder()
+                    .page(PAGE)
+                    .size(SIZE)
+                    .sortBy(DEFAULT_SORT_FIELD.getFieldName())
+                    .build();
+        }
+
+        static PostUpdateRequest buildPostUpdateDto() {
+            return PostUpdateRequest.builder()
                     .content(UPDATED_CONTENT)
                     .build();
         }
@@ -292,8 +277,8 @@ class PostServiceImplTest {
                     .build();
         }
 
-        static PostResponseDto buildPostResponseDto(String content) {
-            return PostResponseDto.builder()
+        static PostResponse buildPostResponseDto(String content) {
+            return PostResponse.builder()
                     .id(POST_ID)
                     .authorId(1L)
                     .content(content)
@@ -301,8 +286,8 @@ class PostServiceImplTest {
                     .build();
         }
 
-        static PostResponseDto buildPostResponseDto(Instant createdAt) {
-            return PostResponseDto.builder()
+        static PostResponse buildPostResponseDto(Instant createdAt) {
+            return PostResponse.builder()
                     .id(POST_ID)
                     .authorId(1L)
                     .content(CONTENT)
