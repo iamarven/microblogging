@@ -112,7 +112,6 @@ class PostServiceImplTest {
 
         when(postRepository.save(any(Post.class))).thenReturn(post);
         when(postMapper.toDto(any(Post.class))).thenReturn(expected);
-//        when(outboxEventMapper.mapToJson(post, OutboxEventType.POST_CREATED)).thenReturn();
 
         PostResponse result = postService.createPost(AUTHOR_ID, postCreateRequest);
 

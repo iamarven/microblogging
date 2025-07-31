@@ -39,7 +39,7 @@ public class OutboxEvent {
     @Column(name = "event_type", nullable = false)
     private OutboxEventType eventType;
 
-    @Column(name = "payload", nullable = false, columnDefinition = "jsonb")
+    @Column(name = "payload", nullable = false)
     private String payload;
 
     @Column(name = "sent", nullable = false)
