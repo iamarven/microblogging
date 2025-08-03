@@ -13,7 +13,6 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class PostEventListener {
-
     private final FeedService feedService;
 
     @KafkaListener(topics = "${topic.post-created}", groupId = "feed-group")

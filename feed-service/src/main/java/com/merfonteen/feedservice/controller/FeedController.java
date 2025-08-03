@@ -1,12 +1,19 @@
 package com.merfonteen.feedservice.controller;
 
-import com.merfonteen.feedservice.dto.FeedPageResponseDto;
+import com.merfonteen.feedservice.dto.FeedPageResponse;
+import com.merfonteen.feedservice.dto.FeedSearchRequest;
 import com.merfonteen.feedservice.dto.SubscriptionDto;
 import com.merfonteen.feedservice.service.FeedService;
 import com.merfonteen.feedservice.service.SubscriptionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
 import java.util.List;
@@ -20,10 +27,9 @@ public class FeedController {
     private final SubscriptionService subscriptionService;
 
     @GetMapping
-    public ResponseEntity<FeedPageResponseDto> getMyFeed(@RequestHeader("X-User-Id") Long currentUserId,
-                                                         @RequestParam(required = false, defaultValue = "0") int page,
-                                                         @RequestParam(required = false, defaultValue = "10") int size) {
-        return ResponseEntity.ok(feedService.getMyFeed(currentUserId, page, size));
+    public ResponseEntity<FeedPageResponse> getMyFeed(@RequestHeader("X-User-Id") Long currentUserId,
+                                                      FeedSearchRequest feedSearchRequest) {
+        return ResponseEntity.ok(feedService.getMyFeed(currentUserId, feedSearchRequest));
     }
 
     @GetMapping("/subscriptions")
