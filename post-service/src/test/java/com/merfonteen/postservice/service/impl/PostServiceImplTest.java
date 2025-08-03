@@ -10,14 +10,16 @@ import com.merfonteen.postservice.dto.PostsSearchRequest;
 import com.merfonteen.postservice.dto.UserPostsPageResponse;
 import com.merfonteen.postservice.mapper.OutboxEventMapper;
 import com.merfonteen.postservice.mapper.PostMapper;
+import com.merfonteen.postservice.model.OutboxEvent;
 import com.merfonteen.postservice.model.Post;
 import com.merfonteen.postservice.model.enums.OutboxEventType;
 import com.merfonteen.postservice.model.enums.PostSortField;
 import com.merfonteen.postservice.repository.OutboxEventRepository;
 import com.merfonteen.postservice.repository.PostRepository;
-import com.merfonteen.postservice.service.RateLimiterService;
+import com.merfonteen.postservice.service.OutboxService;
+import com.merfonteen.postservice.service.redis.RedisRateLimiter;
 import com.merfonteen.postservice.util.PostValidator;
-import com.merfonteen.postservice.util.StringRedisCounter;
+import com.merfonteen.postservice.service.redis.StringRedisCounter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -52,16 +54,13 @@ class PostServiceImplTest {
     private StringRedisCounter redisCounter;
 
     @Mock
-    private RateLimiterService rateLimiterService;
+    private RedisRateLimiter redisRateLimiter;
 
     @Mock
     private PostValidator postValidator;
 
     @Mock
-    private OutboxEventMapper outboxEventMapper;
-
-    @Mock
-    private OutboxEventRepository outboxEventRepository;
+    private OutboxService outboxService;
 
     @InjectMocks
     private PostServiceImpl postService;
@@ -112,18 +111,20 @@ class PostServiceImplTest {
 
         when(postRepository.save(any(Post.class))).thenReturn(post);
         when(postMapper.toDto(any(Post.class))).thenReturn(expected);
+        when(outboxService.create(post, OutboxEventType.POST_CREATED))
+                .thenReturn(buildExpectedOutboxEvent(post, OutboxEventType.POST_CREATED));
 
         PostResponse result = postService.createPost(AUTHOR_ID, postCreateRequest);
 
         assertThat(result).isEqualTo(expected);
 
-        verify(rateLimiterService).validatePostCreationLimit(AUTHOR_ID);
+        verify(redisRateLimiter).validatePostCreationLimit(AUTHOR_ID);
     }
 
     @Test
     void testCreatePost_WhenRateLimitExceeded_ShouldThrowException() {
         doThrow(new TooManyRequestsException(LIMIT_EX))
-                .when(rateLimiterService)
+                .when(redisRateLimiter)
                 .validatePostCreationLimit(AUTHOR_ID);
 
         assertThrows(TooManyRequestsException.class, () -> postService.createPost(AUTHOR_ID, buildPostCreateDto()));
@@ -176,6 +177,8 @@ class PostServiceImplTest {
         Post postToDelete = buildPost();
 
         when(postRepository.findById(POST_ID)).thenReturn(Optional.ofNullable(postToDelete));
+        when(outboxService.create(postToDelete, OutboxEventType.POST_REMOVED))
+                .thenReturn(buildExpectedOutboxEvent(postToDelete, OutboxEventType.POST_REMOVED));
 
         postService.deletePost(POST_ID, AUTHOR_ID);
         verify(postRepository).deleteById(POST_ID);
@@ -218,6 +221,17 @@ class PostServiceImplTest {
 
         static PageRequest buildPageRequest() {
             return PageRequest.of(PAGE, SIZE, Sort.by(Sort.Direction.DESC, DEFAULT_SORT_FIELD.getFieldName()));
+        }
+
+        static OutboxEvent buildExpectedOutboxEvent(Post post, OutboxEventType eventType) {
+            return OutboxEvent.builder()
+                    .aggregateType("Post")
+                    .aggregateId(post.getId())
+                    .eventType(eventType)
+                    .sent(false)
+                    .payload(null)
+                    .createdAt(Instant.now())
+                    .build();
         }
 
         static UserPostsPageResponse buildUserPostsPageResponse(List<PostResponse> posts, Page<Post> page) {

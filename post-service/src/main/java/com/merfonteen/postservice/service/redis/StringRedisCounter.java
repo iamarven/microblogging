@@ -1,4 +1,4 @@
-package com.merfonteen.postservice.util;
+package com.merfonteen.postservice.service.redis;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;

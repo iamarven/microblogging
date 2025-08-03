@@ -6,7 +6,6 @@ import com.merfonteen.postservice.dto.PostCreateRequest;
 import com.merfonteen.postservice.dto.PostResponse;
 import com.merfonteen.postservice.dto.PostUpdateRequest;
 import com.merfonteen.postservice.dto.UserPostsPageResponse;
-import com.merfonteen.postservice.kafka.PostEventProducer;
 import com.merfonteen.postservice.model.Post;
 import com.merfonteen.postservice.repository.PostRepository;
 import com.merfonteen.postservice.service.impl.config.RestTemplateConfig;
@@ -34,7 +33,6 @@ import java.util.Objects;
 
 import static com.merfonteen.postservice.service.impl.RedisCacheIntegrationTests.TestResources.*;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.doNothing;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
@@ -43,9 +41,6 @@ public class RedisCacheIntegrationTests extends AbstractRedisIntegrationTest {
 
     @MockBean
     private UserClient userClient;
-
-    @MockBean
-    private PostEventProducer postEventProducer;
 
     @Autowired
     private PostRepository postRepository;
@@ -81,8 +76,6 @@ public class RedisCacheIntegrationTests extends AbstractRedisIntegrationTest {
     void testGetUserPosts_ShouldCacheResult() {
         Post post = getSavedPost();
 
-        doNothing().when(userClient).checkUserExists(post.getAuthorId());
-
         testRestTemplate.getForEntity(USER_POSTS_URL + post.getAuthorId(), UserPostsPageResponse.class);
         assertThat(redisOps.get(buildUserPostsCacheKey(post.getAuthorId()))).isNotNull();
     }
@@ -90,8 +83,6 @@ public class RedisCacheIntegrationTests extends AbstractRedisIntegrationTest {
     @Test
     void testCreatePost_ShouldEvictCache() {
         Post post = getSavedPost();
-
-        doNothing().when(userClient).checkUserExists(post.getAuthorId());
 
         testRestTemplate.getForEntity(USER_POSTS_URL + post.getAuthorId(), UserPostsPageResponse.class);
         assertThat(redisOps.get(buildUserPostsCacheKey(post.getAuthorId()))).isNotNull();
@@ -108,8 +99,6 @@ public class RedisCacheIntegrationTests extends AbstractRedisIntegrationTest {
         Post post = getSavedPost();
         String postByIdCacheKey = buildPostByIdCacheKey(post.getId());
         String userPostsCacheKey = buildUserPostsCacheKey(post.getAuthorId());
-
-        doNothing().when(userClient).checkUserExists(post.getAuthorId());
 
         testRestTemplate.getForEntity(POSTS_URL + post.getId(), PostResponse.class);
         assertThat(redisOps.get(postByIdCacheKey)).isNotNull();
@@ -135,8 +124,6 @@ public class RedisCacheIntegrationTests extends AbstractRedisIntegrationTest {
         Post post = getSavedPost();
         String postByIdCacheKey = buildPostByIdCacheKey(post.getId());
         String userPostsCacheKey = buildUserPostsCacheKey(post.getAuthorId());
-
-        doNothing().when(userClient).checkUserExists(post.getAuthorId());
 
         testRestTemplate.getForEntity(POSTS_URL + post.getId(), PostResponse.class);
         assertThat(redisOps.get(postByIdCacheKey)).isNotNull();
