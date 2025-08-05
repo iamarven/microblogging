@@ -27,7 +27,6 @@ import java.util.Objects;
 @Primary
 @Service
 public class SubscriptionServiceImpl implements SubscriptionService {
-
     private final UserClient userClient;
     private final SubscriptionMapper subscriptionMapper;
     private final SubscriptionRepository subscriptionRepository;
@@ -88,7 +87,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     @Override
     public SubscriptionDto unfollow(Long targetUserId, Long currentUserId) {
         checkUserExistsOrThrowException(targetUserId);
-        Subscription subscriptionToDelete = findSubscriptionByFollowerIdAndFolloweeIdOrThrowException(targetUserId, currentUserId);
+        Subscription subscriptionToDelete = getSubscriptionByFollowerIdAndFolloweeIdOrThrowException(targetUserId, currentUserId);
 
         subscriptionRepository.delete(subscriptionToDelete);
         log.info("Subscription was successfully deleted: {}", subscriptionToDelete);
@@ -98,7 +97,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         return subscriptionMapper.toDto(subscriptionToDelete);
     }
 
-    private Subscription findSubscriptionByFollowerIdAndFolloweeIdOrThrowException(Long targetUserId, Long currentUserId) {
+    private Subscription getSubscriptionByFollowerIdAndFolloweeIdOrThrowException(Long targetUserId, Long currentUserId) {
         return subscriptionRepository
                 .findSubscriptionByFollowerIdAndFolloweeId(currentUserId, targetUserId)
                 .orElseThrow(() -> new NotFoundException(

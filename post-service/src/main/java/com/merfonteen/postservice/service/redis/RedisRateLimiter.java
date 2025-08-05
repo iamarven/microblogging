@@ -1,4 +1,4 @@
-package com.merfonteen.postservice.service;
+package com.merfonteen.postservice.service.redis;
 
 import com.merfonteen.exceptions.TooManyRequestsException;
 import lombok.RequiredArgsConstructor;
@@ -9,7 +9,7 @@ import java.time.Duration;
 
 @RequiredArgsConstructor
 @Service
-public class RateLimiterService {
+public class RedisRateLimiter {
 
     private final StringRedisTemplate stringRedisTemplate;
 

@@ -1,13 +1,14 @@
 package com.merfonteen.feedservice.service.impl;
 
 import com.merfonteen.feedservice.dto.FeedDto;
-import com.merfonteen.feedservice.dto.FeedPageResponseDto;
+import com.merfonteen.feedservice.dto.FeedPageResponse;
+import com.merfonteen.feedservice.dto.FeedSearchRequest;
 import com.merfonteen.feedservice.mapper.FeedMapper;
 import com.merfonteen.feedservice.model.Feed;
 import com.merfonteen.feedservice.model.Subscription;
 import com.merfonteen.feedservice.repository.FeedRepository;
 import com.merfonteen.feedservice.repository.SubscriptionRepository;
-import com.merfonteen.feedservice.service.FeedCacheService;
+import com.merfonteen.feedservice.service.FeedCacheInvalidator;
 import com.merfonteen.feedservice.service.FeedService;
 import com.merfonteen.kafkaEvents.PostCreatedEvent;
 import com.merfonteen.kafkaEvents.PostRemovedEvent;
@@ -19,7 +20,6 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -32,30 +32,20 @@ import java.util.Set;
 @Primary
 @Service
 public class FeedServiceImpl implements FeedService {
-
     private final FeedMapper feedMapper;
     private final FeedRepository feedRepository;
-    private final FeedCacheService feedCacheService;
+    private final FeedCacheInvalidator feedCacheInvalidator;
     private final SubscriptionRepository subscriptionRepository;
 
-    @Cacheable(value = "feed", key = "#currentUserId + ':' + #page + ':' + #size")
+    @Cacheable(value = "feed", key = "#currentUserId")
     @Override
-    public FeedPageResponseDto getMyFeed(Long currentUserId, int page, int size) {
-        if(size > 100) {
-            size = 100;
-        }
-
-        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+    public FeedPageResponse getMyFeed(Long currentUserId, FeedSearchRequest searchRequest) {
+        PageRequest pageRequest = feedMapper.buildPageRequest(searchRequest);
         Page<Feed> feedsPage = feedRepository.findAllByUserId(currentUserId, pageRequest);
         List<FeedDto> feedsForUser = feedMapper.toListDtos(feedsPage.getContent());
 
-        return FeedPageResponseDto.builder()
-                .feeds(feedsForUser)
-                .currentPage(feedsPage.getNumber())
-                .totalElements(feedsPage.getTotalElements())
-                .totalPages(feedsPage.getTotalPages())
-                .isLastPage(feedsPage.isLast())
-                .build();
+        log.info("Fetched {} feeds for userId={}", feedsForUser.size(), currentUserId);
+        return feedMapper.buildFeedPageResponse(feedsForUser, feedsPage);
     }
 
     @Transactional
@@ -81,7 +71,7 @@ public class FeedServiceImpl implements FeedService {
         }
 
         if(!userIdsToEvictCache.isEmpty()) {
-            feedCacheService.evictFeedCache(userIdsToEvictCache);
+            feedCacheInvalidator.evictFeedCache(userIdsToEvictCache);
         }
 
         if(!buffer.isEmpty()) {

@@ -7,18 +7,17 @@ import com.merfonteen.postservice.dto.PostResponse;
 import com.merfonteen.postservice.dto.PostUpdateRequest;
 import com.merfonteen.postservice.dto.PostsSearchRequest;
 import com.merfonteen.postservice.dto.UserPostsPageResponse;
-import com.merfonteen.postservice.mapper.OutboxEventMapper;
 import com.merfonteen.postservice.mapper.PostMapper;
 import com.merfonteen.postservice.model.OutboxEvent;
 import com.merfonteen.postservice.model.Post;
 import com.merfonteen.postservice.model.enums.OutboxEventType;
-import com.merfonteen.postservice.repository.OutboxEventRepository;
 import com.merfonteen.postservice.repository.PostRepository;
+import com.merfonteen.postservice.service.OutboxService;
 import com.merfonteen.postservice.service.PostService;
-import com.merfonteen.postservice.service.RateLimiterService;
+import com.merfonteen.postservice.service.redis.RedisRateLimiter;
+import com.merfonteen.postservice.service.redis.StringRedisCounter;
 import com.merfonteen.postservice.util.AuthUtil;
 import com.merfonteen.postservice.util.PostValidator;
-import com.merfonteen.postservice.util.StringRedisCounter;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,11 +40,10 @@ import java.util.Optional;
 public class PostServiceImpl implements PostService {
     private final PostMapper postMapper;
     private final PostValidator postValidator;
+    private final OutboxService outboxService;
     private final PostRepository postRepository;
     private final StringRedisCounter redisCounter;
-    private final OutboxEventMapper outboxEventMapper;
-    private final RateLimiterService rateLimiterService;
-    private final OutboxEventRepository outboxEventRepository;
+    private final RedisRateLimiter redisRateLimiter;
 
     @Cacheable(value = CacheNames.POST_BY_ID, key = "#id")
     @Override
@@ -93,7 +91,7 @@ public class PostServiceImpl implements PostService {
     @Transactional
     @Override
     public PostResponse createPost(Long currentUserId, PostCreateRequest request) {
-        rateLimiterService.validatePostCreationLimit(currentUserId);
+        redisRateLimiter.validatePostCreationLimit(currentUserId);
 
         Post post = Post.builder()
                 .authorId(currentUserId)
@@ -104,17 +102,7 @@ public class PostServiceImpl implements PostService {
         Post savedPost = postRepository.save(post);
         log.info("Post with id '{}' successfully created by user '{}'", savedPost.getId(), currentUserId);
 
-        OutboxEvent outboxEvent = OutboxEvent.builder()
-                .aggregateType("Post")
-                .aggregateId(savedPost.getId())
-                .eventType(OutboxEventType.POST_CREATED)
-                .sent(false)
-                .payload(outboxEventMapper.mapToJson(savedPost, OutboxEventType.POST_CREATED))
-                .createdAt(Instant.now())
-                .build();
-
-        outboxEventRepository.save(outboxEvent);
-
+        outboxService.create(savedPost, OutboxEventType.POST_CREATED);
         redisCounter.incrementCounter(currentUserId);
 
         return postMapper.toDto(savedPost);
@@ -154,17 +142,7 @@ public class PostServiceImpl implements PostService {
         postRepository.deleteById(postToDelete.getId());
         log.info("Post with id '{}' successfully deleted by user '{}'", id, currentUserId);
 
-        OutboxEvent outboxEvent = OutboxEvent.builder()
-                .aggregateType("Post")
-                .aggregateId(postToDelete.getId())
-                .eventType(OutboxEventType.POST_REMOVED)
-                .sent(false)
-                .payload(outboxEventMapper.mapToJson(postToDelete, OutboxEventType.POST_REMOVED))
-                .createdAt(Instant.now())
-                .build();
-
-        outboxEventRepository.save(outboxEvent);
-
+        outboxService.create(postToDelete, OutboxEventType.POST_REMOVED);
         redisCounter.decrementCounter(currentUserId);
     }
 

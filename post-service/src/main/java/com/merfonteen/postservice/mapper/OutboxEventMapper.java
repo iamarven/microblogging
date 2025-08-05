@@ -7,9 +7,9 @@ import com.merfonteen.kafkaEvents.PostRemovedEvent;
 import com.merfonteen.postservice.model.Post;
 import com.merfonteen.postservice.model.enums.OutboxEventType;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
-
-import java.time.Instant;
 
 @RequiredArgsConstructor
 @Component
@@ -36,18 +36,24 @@ public class OutboxEventMapper {
         }
     }
 
+    public PageRequest buildPageRequest(int page, int size) {
+        return  PageRequest.of(page, size, Sort.by("createdAt").ascending());
+    }
+
     private String writeValueAsString(Post post, OutboxEventType eventType) {
         switch (eventType) {
             case POST_CREATED -> {
                 try {
-                    return objectMapper.writeValueAsString(new PostCreatedEvent(post.getId(), post.getAuthorId(), Instant.now()));
+                    return objectMapper.writeValueAsString(
+                            new PostCreatedEvent(post.getId(), post.getAuthorId(), post.getCreatedAt()));
                 } catch (JsonProcessingException e) {
                     throw new RuntimeException(e);
                 }
             }
             case POST_REMOVED -> {
                 try {
-                    return objectMapper.writeValueAsString(new PostRemovedEvent(post.getId(), post.getAuthorId()));
+                    return objectMapper.writeValueAsString(
+                            new PostRemovedEvent(post.getId(), post.getAuthorId()));
                 } catch (JsonProcessingException e) {
                     throw new RuntimeException(e);
                 }
