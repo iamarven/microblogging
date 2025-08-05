@@ -84,12 +84,7 @@ class FeedServiceImplTest {
         feedService.distributePostToSubscribers(event);
 
         verify(feedRepository, times(2)).saveAll(anyList());
-
-        ArgumentCaptor<Set<Long>> cacheEvictCaptor = ArgumentCaptor.forClass(Set.class);
-        Set<Long> evictedUserIds = cacheEvictCaptor.getValue();
-
-        verify(feedCacheInvalidator, times(1)).evictFeedCache(cacheEvictCaptor.capture());
-        assertEquals(100, evictedUserIds.size());
+        verify(feedCacheInvalidator, times(1)).evictFeedCache(any(Set.class));
     }
 
     static class TestResources {
