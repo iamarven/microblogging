@@ -102,9 +102,7 @@ public class PostServiceImpl implements PostService {
         Post savedPost = postRepository.save(post);
         log.info("Post with id '{}' successfully created by user '{}'", savedPost.getId(), currentUserId);
 
-        OutboxEvent outboxEvent = outboxService.create(savedPost, OutboxEventType.POST_CREATED);
-        outboxService.save(outboxEvent);
-
+        outboxService.create(savedPost, OutboxEventType.POST_CREATED);
         redisCounter.incrementCounter(currentUserId);
 
         return postMapper.toDto(savedPost);
@@ -144,9 +142,7 @@ public class PostServiceImpl implements PostService {
         postRepository.deleteById(postToDelete.getId());
         log.info("Post with id '{}' successfully deleted by user '{}'", id, currentUserId);
 
-        OutboxEvent outboxEvent = outboxService.create(postToDelete, OutboxEventType.POST_REMOVED);
-        outboxService.save(outboxEvent);
-
+        outboxService.create(postToDelete, OutboxEventType.POST_REMOVED);
         redisCounter.decrementCounter(currentUserId);
     }
 

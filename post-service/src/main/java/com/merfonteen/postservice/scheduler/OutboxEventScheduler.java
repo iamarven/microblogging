@@ -1,4 +1,4 @@
-package com.merfonteen.postservice.kafka;
+package com.merfonteen.postservice.scheduler;
 
 import com.merfonteen.postservice.service.OutboxService;
 import lombok.RequiredArgsConstructor;
