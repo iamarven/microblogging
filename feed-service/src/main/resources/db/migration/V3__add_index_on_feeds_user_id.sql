@@ -1,1 +1,0 @@
-CREATE INDEX idx_feeds_user_id ON feed_service.feeds(user_id);

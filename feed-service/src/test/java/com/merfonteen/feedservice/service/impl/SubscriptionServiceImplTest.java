@@ -8,6 +8,7 @@ import com.merfonteen.feedservice.kafka.eventProducer.SubscriptionEventProducer;
 import com.merfonteen.feedservice.mapper.SubscriptionMapper;
 import com.merfonteen.feedservice.model.Subscription;
 import com.merfonteen.feedservice.repository.SubscriptionRepository;
+import com.merfonteen.feedservice.service.OutboxService;
 import feign.FeignException;
 import feign.Request;
 import feign.Response;
@@ -36,13 +37,13 @@ class SubscriptionServiceImplTest {
     private UserClient userClient;
 
     @Mock
+    private OutboxService outboxService;
+
+    @Mock
     private SubscriptionMapper subscriptionMapper;
 
     @Mock
     private SubscriptionRepository subscriptionRepository;
-
-    @Mock
-    private SubscriptionEventProducer subscriptionEventProducer;
 
     @InjectMocks
     private SubscriptionServiceImpl subscriptionService;
