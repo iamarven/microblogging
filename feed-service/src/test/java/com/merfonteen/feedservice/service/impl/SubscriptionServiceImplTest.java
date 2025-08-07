@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.merfonteen.feedservice.service.impl.SubscriptionServiceImplTest.TestResources.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
@@ -47,103 +49,60 @@ class SubscriptionServiceImplTest {
 
     @Test
     void testGetMySubscriptions_Success() {
-        Long userId = 1L;
-        Subscription subscription1 = Subscription.builder()
-                .id(1L)
-                .followerId(userId)
-                .followeeId(2L)
-                .createdAt(Instant.now())
-                .build();
+        Subscription sub1 = buildSubscription(FIRST_SUBSCRIPTION_ID, USER_ID, FIRST_FOLLOWEE_ID);
+        Subscription sub2 = buildSubscription(SECOND_SUBSCRIPTION_ID, USER_ID, SECOND_FOLLOWEE_ID);
 
-        Subscription subscription2 = Subscription.builder()
-                .id(2L)
-                .followerId(userId)
-                .followeeId(3L)
-                .createdAt(Instant.now())
-                .build();
+        List<SubscriptionDto> subscriptionDtos = buildSubscriptionDtoList(List.of(sub1, sub2));
 
-        SubscriptionDto dto1 = new SubscriptionDto(1L, userId, 2L, subscription1.getCreatedAt());
-        SubscriptionDto dto2 = new SubscriptionDto(2L, userId, 3L, subscription2.getCreatedAt());
+        when(subscriptionRepository.findAllByFollowerId(USER_ID)).thenReturn(List.of(sub1, sub2));
+        when(subscriptionMapper.toDtos(List.of(sub1, sub2))).thenReturn(subscriptionDtos);
 
-        when(subscriptionRepository.findAllByFollowerId(userId))
-                .thenReturn(List.of(subscription1, subscription2));
-        when(subscriptionMapper.toDto(subscription1)).thenReturn(dto1);
-        when(subscriptionMapper.toDto(subscription2)).thenReturn(dto2);
+        List<SubscriptionDto> result = subscriptionService.getMySubscriptions(USER_ID);
 
-        List<SubscriptionDto> result = subscriptionService.getMySubscriptions(userId);
-
-        assertEquals(List.of(dto1, dto2), result);
-        verify(subscriptionRepository, times(1)).findAllByFollowerId(userId);
-        verify(subscriptionMapper, times(1)).toDto(subscription1);
-        verify(subscriptionMapper, times(1)).toDto(subscription2);
+        assertThat(result).isEqualTo(subscriptionDtos);
+        verify(subscriptionRepository, times(1)).findAllByFollowerId(USER_ID);
     }
 
     @Test
     void testGetMySubscribers_Success() {
-        Long userId = 10L;
-        Subscription sub1 = Subscription.builder()
-                .id(100L)
-                .followerId(2L)
-                .followeeId(userId)
-                .createdAt(Instant.now())
-                .build();
+        Subscription sub1 = buildSubscription(FIRST_SUBSCRIPTION_ID, FIRST_FOLLOWER_ID, USER_ID);
+        Subscription sub2 = buildSubscription(SECOND_SUBSCRIPTION_ID, SECOND_FOLLOWER_ID, USER_ID);
 
-        Subscription sub2 = Subscription.builder()
-                .id(101L)
-                .followerId(3L)
-                .followeeId(userId)
-                .createdAt(Instant.now())
-                .build();
+        List<SubscriptionDto> subscriptionDtos = buildSubscriptionDtoList(List.of(sub1, sub2));
 
-        SubscriptionDto dto1 = new SubscriptionDto(100L, 2L, userId, sub1.getCreatedAt());
-        SubscriptionDto dto2 = new SubscriptionDto(101L, 3L, userId, sub2.getCreatedAt());
+        when(subscriptionRepository.findAllByFolloweeId(USER_ID)).thenReturn(List.of(sub1, sub2));
+        when(subscriptionMapper.toDtos(List.of(sub1, sub2))).thenReturn(subscriptionDtos);
 
-        when(subscriptionRepository.findAllByFolloweeId(userId)).thenReturn(List.of(sub1, sub2));
-        when(subscriptionMapper.toDto(sub1)).thenReturn(dto1);
-        when(subscriptionMapper.toDto(sub2)).thenReturn(dto2);
+        List<SubscriptionDto> result = subscriptionService.getMySubscribers(USER_ID);
 
-        List<SubscriptionDto> result = subscriptionService.getMySubscribers(userId);
-
-        assertEquals(List.of(dto1, dto2), result);
-        verify(subscriptionRepository, times(1)).findAllByFolloweeId(userId);
-        verify(subscriptionMapper, times(1)).toDto(sub1);
-        verify(subscriptionMapper, times(1)).toDto(sub2);
+        assertThat(result).isEqualTo(subscriptionDtos);
+        verify(subscriptionRepository, times(1)).findAllByFolloweeId(USER_ID);
     }
 
     @Test
     void testFollow_Success() {
-        Long followerId = 1L;
-        Long followeeId = 2L;
+        Subscription subscription = buildSubscription(FIRST_SUBSCRIPTION_ID, FIRST_FOLLOWER_ID, FIRST_FOLLOWEE_ID);
+        SubscriptionDto expectedDto = buildSubscriptionDto(subscription);
 
-        Subscription subscription = Subscription.builder()
-                .followerId(followerId)
-                .followeeId(followeeId)
-                .createdAt(Instant.now())
-                .build();
-
-        SubscriptionDto expectedDto = new SubscriptionDto(null, followerId, followeeId, subscription.getCreatedAt());
-
-        doNothing().when(userClient).checkUserExists(followeeId);
+        doNothing().when(userClient).checkUserExists(FIRST_FOLLOWEE_ID);
 
         when(subscriptionRepository.save(any(Subscription.class))).thenReturn(subscription);
         when(subscriptionMapper.toDto(any(Subscription.class))).thenReturn(expectedDto);
 
-        SubscriptionDto result = subscriptionService.follow(followeeId, followerId);
+        SubscriptionDto result = subscriptionService.follow(FIRST_FOLLOWEE_ID, FIRST_FOLLOWER_ID);
 
         assertEquals(expectedDto, result);
-        verify(userClient).checkUserExists(followeeId);
+        verify(userClient).checkUserExists(FIRST_FOLLOWEE_ID);
         verify(subscriptionRepository).save(any(Subscription.class));
         verify(subscriptionMapper).toDto(any(Subscription.class));
     }
 
     @Test
     void testFollow_FollowingYourself_ShouldThrowException() {
-        Long userId = 5L;
-
-        doNothing().when(userClient).checkUserExists(userId);
+        doNothing().when(userClient).checkUserExists(USER_ID);
 
         BadRequestException exception = assertThrows(BadRequestException.class,
-                () -> subscriptionService.follow(userId, userId));
+                () -> subscriptionService.follow(USER_ID, USER_ID));
 
         assertEquals("Cannot follow yourself", exception.getMessage());
         verifyNoInteractions(subscriptionRepository, subscriptionMapper);
@@ -151,81 +110,100 @@ class SubscriptionServiceImplTest {
 
     @Test
     void testFollow_WhenUserDoesNotExists_ShouldThrowException() {
-        Long followerId = 1L;
-        Long followeeId = 2L;
+        FeignException.NotFound feignNotFound = buildUserNotFoundException();
 
-        FeignException.NotFound feignNotFound =
-                (FeignException.NotFound) FeignException.errorStatus("checkUserExists",
-                        Response.builder()
-                                .request(Request.create(Request.HttpMethod.GET, "", Map.of(), null, Charset.defaultCharset(), null))
-                                .status(404)
-                                .reason("Not Found")
-                                .headers(Map.of())
-                                .build()
-                );
-
-        doThrow(feignNotFound).when(userClient).checkUserExists(followeeId);
+        doThrow(feignNotFound).when(userClient).checkUserExists(FIRST_FOLLOWEE_ID);
 
         NotFoundException exception = assertThrows(
                 NotFoundException.class,
-                () -> subscriptionService.follow(followeeId, followerId)
+                () -> subscriptionService.follow(FIRST_FOLLOWEE_ID, FIRST_FOLLOWER_ID)
         );
 
-        assertEquals("User with id '2' not found", exception.getMessage());
+        assertEquals("User with id '%d' not found".formatted(FIRST_FOLLOWEE_ID), exception.getMessage());
 
-        verify(userClient).checkUserExists(followeeId);
+        verify(userClient).checkUserExists(FIRST_FOLLOWEE_ID);
         verifyNoMoreInteractions(subscriptionRepository, subscriptionMapper);
     }
 
     @Test
     void testUnfollow_Success() {
-        Long followerId = 1L;
-        Long followeeId = 2L;
+        Subscription subscription = buildSubscription(FIRST_SUBSCRIPTION_ID, FIRST_FOLLOWER_ID, FIRST_FOLLOWEE_ID);
+        SubscriptionDto subscriptionDto = buildSubscriptionDto(subscription);
 
-        Subscription subscription = Subscription.builder()
-                .followerId(followerId)
-                .followeeId(followeeId)
-                .createdAt(Instant.now())
-                .build();
-
-        SubscriptionDto subscriptionDto = SubscriptionDto.builder()
-                .followerId(followerId)
-                .followeeId(followeeId)
-                .build();
-
-        doNothing().when(userClient).checkUserExists(followeeId);
-        when(subscriptionRepository.findSubscriptionByFollowerIdAndFolloweeId(followerId, followeeId))
+        doNothing().when(userClient).checkUserExists(FIRST_FOLLOWEE_ID);
+        when(subscriptionRepository.findSubscriptionByFollowerIdAndFolloweeId(FIRST_FOLLOWER_ID, FIRST_FOLLOWEE_ID))
                 .thenReturn(Optional.of(subscription));
         doNothing().when(subscriptionRepository).delete(subscription);
         when(subscriptionMapper.toDto(any(Subscription.class))).thenReturn(subscriptionDto);
 
-        SubscriptionDto result = subscriptionService.unfollow(followeeId, followerId);
+        SubscriptionDto result = subscriptionService.unfollow(FIRST_FOLLOWEE_ID, FIRST_FOLLOWER_ID);
 
         assertEquals(subscriptionDto, result);
 
-        verify(userClient).checkUserExists(followeeId);
-        verify(subscriptionRepository).findSubscriptionByFollowerIdAndFolloweeId(followerId, followeeId);
+        verify(userClient).checkUserExists(FIRST_FOLLOWEE_ID);
+        verify(subscriptionRepository).findSubscriptionByFollowerIdAndFolloweeId(FIRST_FOLLOWER_ID, FIRST_FOLLOWEE_ID);
         verify(subscriptionRepository).delete(subscription);
-        verify(subscriptionMapper).toDto(any(Subscription.class));
     }
 
     @Test
-    void unfollow_shouldThrowNotFoundException_whenSubscriptionDoesNotExist() {
-        Long followerId = 1L;
-        Long followeeId = 2L;
-
-        doNothing().when(userClient).checkUserExists(followeeId);
-        when(subscriptionRepository.findSubscriptionByFollowerIdAndFolloweeId(followerId, followeeId))
+    void testUnfollow_whenSubscriptionDoesNotExist_shouldThrowNotFoundException() {
+        doNothing().when(userClient).checkUserExists(FIRST_FOLLOWEE_ID);
+        when(subscriptionRepository.findSubscriptionByFollowerIdAndFolloweeId(FIRST_FOLLOWER_ID, FIRST_FOLLOWEE_ID))
                 .thenReturn(Optional.empty());
 
         NotFoundException exception = assertThrows(NotFoundException.class,
-                () -> subscriptionService.unfollow(followeeId, followerId));
+                () -> subscriptionService.unfollow(FIRST_FOLLOWEE_ID, FIRST_FOLLOWER_ID));
 
-        assertEquals("Subscription was not found with follower id '1' and followee id '2'", exception.getMessage());
+        assertEquals("Subscription was not found with follower id '%d' and followee id '%d'"
+                .formatted(FIRST_FOLLOWER_ID, FIRST_FOLLOWEE_ID), exception.getMessage());
 
-        verify(userClient).checkUserExists(followeeId);
-        verify(subscriptionRepository).findSubscriptionByFollowerIdAndFolloweeId(followerId, followeeId);
+        verify(userClient).checkUserExists(FIRST_FOLLOWEE_ID);
+        verify(subscriptionRepository).findSubscriptionByFollowerIdAndFolloweeId(FIRST_FOLLOWER_ID, FIRST_FOLLOWEE_ID);
         verifyNoMoreInteractions(subscriptionRepository, subscriptionMapper);
     }
 
+    static class TestResources {
+        static final Long USER_ID = 1L;
+        static final Long FIRST_SUBSCRIPTION_ID = 111L;
+        static final Long SECOND_SUBSCRIPTION_ID = 222L;
+        static final Long FIRST_FOLLOWER_ID = 12L;
+        static final Long SECOND_FOLLOWER_ID = 31L;
+        static final Long FIRST_FOLLOWEE_ID = 22L;
+        static final Long SECOND_FOLLOWEE_ID = 20L;
+
+        static List<SubscriptionDto> buildSubscriptionDtoList(List<Subscription> subscriptions) {
+            return subscriptions.stream()
+                    .map(TestResources::buildSubscriptionDto)
+                    .toList();
+        }
+
+        static Subscription buildSubscription(Long id, Long followerId, Long followeeId) {
+            return Subscription.builder()
+                    .id(id)
+                    .followerId(followerId)
+                    .followeeId(followeeId)
+                    .createdAt(Instant.now())
+                    .build();
+        }
+
+        static SubscriptionDto buildSubscriptionDto(Subscription subscription) {
+            return SubscriptionDto.builder()
+                    .id(subscription.getId())
+                    .followerId(subscription.getFollowerId())
+                    .followeeId(subscription.getFolloweeId())
+                    .createdAt(subscription.getCreatedAt())
+                    .build();
+        }
+
+        static FeignException.NotFound buildUserNotFoundException() {
+            return (FeignException.NotFound) FeignException.errorStatus("checkUserExists",
+                    Response.builder()
+                            .request(Request.create(Request.HttpMethod.GET, "", Map.of(), null, Charset.defaultCharset(), null))
+                            .status(404)
+                            .reason("Not Found")
+                            .headers(Map.of())
+                            .build()
+            );
+        }
+    }
 }

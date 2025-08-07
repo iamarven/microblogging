@@ -1,5 +1,6 @@
 package com.merfonteen.feedservice.service.impl;
 
+import com.merfonteen.feedservice.config.CacheNames;
 import com.merfonteen.feedservice.dto.FeedDto;
 import com.merfonteen.feedservice.dto.FeedPageResponse;
 import com.merfonteen.feedservice.dto.FeedSearchRequest;
@@ -37,7 +38,7 @@ public class FeedServiceImpl implements FeedService {
     private final FeedCacheInvalidator feedCacheInvalidator;
     private final SubscriptionRepository subscriptionRepository;
 
-    @Cacheable(value = "feed", key = "#currentUserId")
+    @Cacheable(value = CacheNames.FEED_CACHE, key = "#currentUserId")
     @Override
     public FeedPageResponse getMyFeed(Long currentUserId, FeedSearchRequest searchRequest) {
         PageRequest pageRequest = feedMapper.buildPageRequest(searchRequest);
