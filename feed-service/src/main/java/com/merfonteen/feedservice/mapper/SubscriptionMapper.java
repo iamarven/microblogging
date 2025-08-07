@@ -10,5 +10,5 @@ import java.util.List;
 public interface SubscriptionMapper {
     SubscriptionDto toDto(Subscription subscription);
     Subscription toEntity(SubscriptionDto subscriptionDto);
-    List<SubscriptionDto> toDtos(List<Subscription> subscriptionDtos);
+    List<SubscriptionDto> toDtos(List<Subscription> subscriptions);
 }

@@ -3,18 +3,21 @@ package com.merfonteen.feedservice.service.impl;
 import com.merfonteen.exceptions.BadRequestException;
 import com.merfonteen.exceptions.NotFoundException;
 import com.merfonteen.feedservice.client.UserClient;
+import com.merfonteen.feedservice.config.CacheNames;
 import com.merfonteen.feedservice.dto.SubscriptionDto;
-import com.merfonteen.feedservice.kafka.eventProducer.SubscriptionEventProducer;
 import com.merfonteen.feedservice.mapper.SubscriptionMapper;
 import com.merfonteen.feedservice.model.Subscription;
+import com.merfonteen.feedservice.model.enums.OutboxEventType;
 import com.merfonteen.feedservice.repository.SubscriptionRepository;
+import com.merfonteen.feedservice.service.OutboxService;
 import com.merfonteen.feedservice.service.SubscriptionService;
-import com.merfonteen.kafkaEvents.SubscriptionCreatedEvent;
-import com.merfonteen.kafkaEvents.SubscriptionRemovedEvent;
 import feign.FeignException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 
@@ -28,28 +31,27 @@ import java.util.Objects;
 @Service
 public class SubscriptionServiceImpl implements SubscriptionService {
     private final UserClient userClient;
+    private final OutboxService outboxService;
     private final SubscriptionMapper subscriptionMapper;
     private final SubscriptionRepository subscriptionRepository;
-    private final SubscriptionEventProducer subscriptionEventProducer;
 
+    @Cacheable(value = CacheNames.SUBSCRIPTION_CACHE, key = "#currentUserId")
     @Override
     public List<SubscriptionDto> getMySubscriptions(Long currentUserId) {
         List<Subscription> subscriptions = subscriptionRepository.findAllByFollowerId(currentUserId);
         log.info("Getting all subscriptions for user with id: {}", currentUserId);
-        return subscriptions.stream()
-                .map(subscriptionMapper::toDto)
-                .toList();
+        return subscriptionMapper.toDtos(subscriptions);
     }
 
+    @Cacheable(value = CacheNames.SUBSCRIBERS_CACHE, key = "#currentUserId")
     @Override
     public List<SubscriptionDto> getMySubscribers(Long currentUserId) {
         List<Subscription> subscribers = subscriptionRepository.findAllByFolloweeId(currentUserId);
         log.info("Getting all subscribers for user with id: {}", currentUserId);
-        return subscribers.stream()
-                .map(subscriptionMapper::toDto)
-                .toList();
+        return subscriptionMapper.toDtos(subscribers);
     }
 
+    @Cacheable(value = CacheNames.SUBSCRIBERS_CACHE, key = "#userId")
     @Override
     public List<SubscriptionDto> getUserSubscribersByUserId(Long userId) {
         checkUserExistsOrThrowException(userId);
@@ -58,6 +60,10 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         return subscriptionMapper.toDtos(userSubscribers);
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = CacheNames.SUBSCRIPTION_CACHE, key = "#currentUserId"),
+            @CacheEvict(value = CacheNames.SUBSCRIBERS_CACHE, key = "#targetUserId")
+    })
     @Transactional
     @Override
     public SubscriptionDto follow(Long targetUserId, Long currentUserId) {
@@ -73,16 +79,19 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 .createdAt(Instant.now())
                 .build();
 
-        subscriptionRepository.save(subscription);
+        Subscription saved = subscriptionRepository.save(subscription);
         log.info("Subscription was successfully created with follower id '{}' and followee id '{}'",
                 currentUserId, targetUserId);
 
-        subscriptionEventProducer.sendSubscriptionCreatedEvent(new SubscriptionCreatedEvent(
-                        subscription.getId(), currentUserId, targetUserId));
+        outboxService.create(subscription, currentUserId, targetUserId, OutboxEventType.SUBSCRIPTION_CREATED);
 
-        return subscriptionMapper.toDto(subscription);
+        return subscriptionMapper.toDto(saved);
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = CacheNames.SUBSCRIPTION_CACHE, key = "#currentUserId"),
+            @CacheEvict(value = CacheNames.SUBSCRIBERS_CACHE, key = "#targetUserId")
+    })
     @Transactional
     @Override
     public SubscriptionDto unfollow(Long targetUserId, Long currentUserId) {
@@ -92,7 +101,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         subscriptionRepository.delete(subscriptionToDelete);
         log.info("Subscription was successfully deleted: {}", subscriptionToDelete);
 
-        subscriptionEventProducer.sendSubscriptionRemovedEvent(new SubscriptionRemovedEvent(targetUserId));
+        outboxService.create(subscriptionToDelete, currentUserId, targetUserId, OutboxEventType.SUBSCRIPTION_REMOVED);
 
         return subscriptionMapper.toDto(subscriptionToDelete);
     }
