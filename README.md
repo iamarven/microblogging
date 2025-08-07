@@ -23,8 +23,9 @@ A microservices application. A mini-social network with basic functionality: cre
 - **Testcontainers**
 - **Docker**
 
-## Microservices description
 ---
+
+## Microservices description  
 
 **API Gateway:**  
 Uses Spring Cloud Gateway and Eureka to route requests.  
