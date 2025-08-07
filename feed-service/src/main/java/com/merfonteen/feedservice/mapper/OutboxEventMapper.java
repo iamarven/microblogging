@@ -4,8 +4,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.merfonteen.feedservice.model.Subscription;
 import com.merfonteen.feedservice.model.enums.OutboxEventType;
-import com.merfonteen.kafkaEvents.PostCreatedEvent;
-import com.merfonteen.kafkaEvents.PostRemovedEvent;
 import com.merfonteen.kafkaEvents.SubscriptionCreatedEvent;
 import com.merfonteen.kafkaEvents.SubscriptionRemovedEvent;
 import lombok.RequiredArgsConstructor;

@@ -4,7 +4,6 @@ import com.merfonteen.exceptions.BadRequestException;
 import com.merfonteen.exceptions.NotFoundException;
 import com.merfonteen.feedservice.client.UserClient;
 import com.merfonteen.feedservice.dto.SubscriptionDto;
-import com.merfonteen.feedservice.kafka.eventProducer.SubscriptionEventProducer;
 import com.merfonteen.feedservice.mapper.SubscriptionMapper;
 import com.merfonteen.feedservice.model.Subscription;
 import com.merfonteen.feedservice.repository.SubscriptionRepository;
