@@ -1,13 +1,13 @@
 package com.merfonteen.commentservice.service.impl;
 
 import com.merfonteen.commentservice.client.PostClient;
-import com.merfonteen.commentservice.dto.CommentRequestDto;
-import com.merfonteen.commentservice.dto.CommentResponseDto;
+import com.merfonteen.commentservice.dto.CommentCreateRequest;
+import com.merfonteen.commentservice.dto.CommentResponse;
 import com.merfonteen.commentservice.kafka.eventProducer.CommentEventProducer;
 import com.merfonteen.commentservice.model.Comment;
 import com.merfonteen.commentservice.repository.CommentRepository;
 import com.merfonteen.commentservice.service.impl.config.RestTemplateConfig;
-import com.merfonteen.commentservice.util.CommentRateLimiter;
+import com.merfonteen.commentservice.service.redis.CommentRateLimiter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -101,14 +101,14 @@ public class RedisCacheIntegrationTests {
         httpHeaders.setContentType(MediaType.APPLICATION_JSON);
         httpHeaders.set("X-User-Id", String.valueOf(comment.getUserId() + 1));
 
-        CommentRequestDto requestDto = CommentRequestDto.builder()
+        CommentCreateRequest requestDto = CommentCreateRequest.builder()
                 .postId(comment.getPostId())
                 .content("new comment")
                 .build();
 
-        HttpEntity<CommentRequestDto> request = new HttpEntity<>(requestDto, httpHeaders);
+        HttpEntity<CommentCreateRequest> request = new HttpEntity<>(requestDto, httpHeaders);
 
-        testRestTemplate.postForEntity("/api/comments", request, CommentResponseDto.class);
+        testRestTemplate.postForEntity("/api/comments", request, CommentResponse.class);
 
         String newValue = redisOps.get(cacheKey);
         assertThat(Long.parseLong(newValue)).isGreaterThan(previousCount);
@@ -131,7 +131,7 @@ public class RedisCacheIntegrationTests {
         testRestTemplate.exchange("/api/comments/" + comment.getId(),
                 HttpMethod.DELETE,
                 request,
-                CommentResponseDto.class);
+                CommentResponse.class);
 
         String newValue = redisOps.get(cacheKey);
         assertThat(Long.parseLong(newValue)).isLessThan(previousCount);

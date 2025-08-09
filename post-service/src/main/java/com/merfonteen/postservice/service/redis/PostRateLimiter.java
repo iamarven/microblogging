@@ -9,15 +9,15 @@ import java.time.Duration;
 
 @RequiredArgsConstructor
 @Service
-public class RedisRateLimiter {
-
+public class PostRateLimiter {
     private final StringRedisTemplate stringRedisTemplate;
 
+    private static final String CACHE_KEY = "limit:post:user:";
     private static final int POST_LIMIT = 5;
     private static final Duration DURATION = Duration.ofMinutes(1);
 
-    public void validatePostCreationLimit(Long userId) {
-        String key = "post_create:" + userId;
+    public void limitPostCreation(Long userId) {
+        String key = CACHE_KEY + userId;
         Long currentCount = stringRedisTemplate.opsForValue().increment(key);
 
         if(currentCount != null && currentCount == 1) {

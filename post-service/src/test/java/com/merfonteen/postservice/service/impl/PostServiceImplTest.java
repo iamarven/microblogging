@@ -8,18 +8,16 @@ import com.merfonteen.postservice.dto.PostResponse;
 import com.merfonteen.postservice.dto.PostUpdateRequest;
 import com.merfonteen.postservice.dto.PostsSearchRequest;
 import com.merfonteen.postservice.dto.UserPostsPageResponse;
-import com.merfonteen.postservice.mapper.OutboxEventMapper;
 import com.merfonteen.postservice.mapper.PostMapper;
 import com.merfonteen.postservice.model.OutboxEvent;
 import com.merfonteen.postservice.model.Post;
 import com.merfonteen.postservice.model.enums.OutboxEventType;
 import com.merfonteen.postservice.model.enums.PostSortField;
-import com.merfonteen.postservice.repository.OutboxEventRepository;
 import com.merfonteen.postservice.repository.PostRepository;
 import com.merfonteen.postservice.service.OutboxService;
-import com.merfonteen.postservice.service.redis.RedisRateLimiter;
+import com.merfonteen.postservice.service.redis.PostRateLimiter;
 import com.merfonteen.postservice.util.PostValidator;
-import com.merfonteen.postservice.service.redis.StringRedisCounter;
+import com.merfonteen.postservice.service.redis.RedisCounter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -51,10 +49,10 @@ class PostServiceImplTest {
     private PostRepository postRepository;
 
     @Mock
-    private StringRedisCounter redisCounter;
+    private RedisCounter redisCounter;
 
     @Mock
-    private RedisRateLimiter redisRateLimiter;
+    private PostRateLimiter postRateLimiter;
 
     @Mock
     private PostValidator postValidator;
@@ -118,14 +116,14 @@ class PostServiceImplTest {
 
         assertThat(result).isEqualTo(expected);
 
-        verify(redisRateLimiter).validatePostCreationLimit(AUTHOR_ID);
+        verify(postRateLimiter).limitPostCreation(AUTHOR_ID);
     }
 
     @Test
     void testCreatePost_WhenRateLimitExceeded_ShouldThrowException() {
         doThrow(new TooManyRequestsException(LIMIT_EX))
-                .when(redisRateLimiter)
-                .validatePostCreationLimit(AUTHOR_ID);
+                .when(postRateLimiter)
+                .limitPostCreation(AUTHOR_ID);
 
         assertThrows(TooManyRequestsException.class, () -> postService.createPost(AUTHOR_ID, buildPostCreateDto()));
         verify(postRepository, never()).save(any(Post.class));

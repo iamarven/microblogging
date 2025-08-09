@@ -1,21 +1,23 @@
 package com.merfonteen.commentservice.dto;
 
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
+import java.time.Instant;
+
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class CommentRequestDto {
-    @Positive
+public class CommentResponse implements Serializable {
+    private Long id;
     private Long postId;
-    @NotEmpty
-    @Size(min = 1, max = 5000)
+    private Long userId;
     private String content;
+    private Long parentId;
+    private Instant createdAt;
+    private Instant updatedAt;
 }

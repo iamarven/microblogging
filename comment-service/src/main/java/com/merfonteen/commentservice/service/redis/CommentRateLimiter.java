@@ -1,4 +1,4 @@
-package com.merfonteen.commentservice.util;
+package com.merfonteen.commentservice.service.redis;
 
 import com.merfonteen.exceptions.TooManyRequestsException;
 import lombok.RequiredArgsConstructor;
@@ -10,21 +10,21 @@ import java.time.Duration;
 @RequiredArgsConstructor
 @Component
 public class CommentRateLimiter {
-
-    private final Long MAX_COMMENTS = 5L;
-    private final Duration DURATION = Duration.ofMinutes(1);
-
     private final StringRedisTemplate stringRedisTemplate;
 
-    public void limitLeavingComments(Long userId) {
-        String cacheKey = "limit:comment:user:" + userId;
-        Long count = stringRedisTemplate.opsForValue().increment(cacheKey);
+    private static final String CACHE_KEY = "limit:comment:user:";
+    private static final int MAX_COMMENTS = 5;
+    private static final Duration DURATION = Duration.ofMinutes(1);
 
-        if(count == 1) {
-            stringRedisTemplate.expire(cacheKey, DURATION);
+    public void limitLeavingComments(Long userId) {
+        String key = CACHE_KEY + userId;
+        Long count = stringRedisTemplate.opsForValue().increment(key);
+
+        if(count != null && count == 1) {
+            stringRedisTemplate.expire(key, DURATION);
         }
 
-        if(count > MAX_COMMENTS) {
+        if(count != null && count > MAX_COMMENTS) {
             throw new TooManyRequestsException("You can leave max 5 comments per minute");
         }
     }
