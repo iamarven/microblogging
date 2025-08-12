@@ -11,8 +11,10 @@ import com.merfonteen.commentservice.dto.RepliesOnCommentSearchRequest;
 import com.merfonteen.commentservice.kafka.eventProducer.CommentEventProducer;
 import com.merfonteen.commentservice.mapper.CommentMapper;
 import com.merfonteen.commentservice.model.Comment;
+import com.merfonteen.commentservice.model.enums.OutboxEventType;
 import com.merfonteen.commentservice.repository.CommentRepository;
 import com.merfonteen.commentservice.service.CommentService;
+import com.merfonteen.commentservice.service.OutboxService;
 import com.merfonteen.commentservice.service.redis.CommentRateLimiter;
 import com.merfonteen.commentservice.service.redis.RedisCacheInvalidator;
 import com.merfonteen.commentservice.service.redis.RedisCounter;
@@ -47,8 +49,8 @@ public class CommentServiceImpl implements CommentService {
     private final CommentMapper commentMapper;
     private final CommentRepository commentRepository;
     private final CommentRateLimiter commentRateLimiter;
-    private final CommentEventProducer commentEventProducer;
     private final RedisCacheInvalidator redisCacheInvalidator;
+    private final OutboxService outboxService;
 
     @Cacheable(value = COMMENTS_BY_POST_ID_CACHE, key = "#searchRequest.getPostId() + " +
                                                         "':' + #searchRequest.page + " +
@@ -122,13 +124,7 @@ public class CommentServiceImpl implements CommentService {
         Comment savedComment = commentRepository.save(comment);
         log.info("Comment '{}' saved to database successfully", savedComment.getId());
 
-        CommentCreatedEvent commentCreatedEvent = CommentCreatedEvent.builder()
-                .commentId(savedComment.getId())
-                .userId(currentUserId)
-                .postId(requestDto.getPostId())
-                .build();
-
-        commentEventProducer.sendCommentCreatedEvent(commentCreatedEvent);
+        outboxService.create(savedComment, OutboxEventType.COMMENT_CREATED);
 
         redisCacheInvalidator.evictPostsCache(requestDto.getPostId());
         redisCounter.incrementCounter(redisCounter.getCommentsCacheKey(savedComment.getPostId()));
@@ -155,7 +151,7 @@ public class CommentServiceImpl implements CommentService {
         log.info("Added nested comment '{}' to comment '{}'", saved.getId(), parent.getId());
 
         redisCacheInvalidator.evictPostsCache(parent.getPostId());
-        redisCacheInvalidator.evictRepliesCache(saved.getId());
+        redisCacheInvalidator.evictRepliesCache(parent.getId());
 
         redisCounter.incrementCounter(redisCounter.getRepliesCacheKey(parent.getId()));
 
@@ -189,13 +185,7 @@ public class CommentServiceImpl implements CommentService {
         commentRepository.delete(comment);
         log.info("User '{}' deleted comment '{}'", currentUserId, commentId);
 
-        CommentRemovedEvent commentRemovedEvent = CommentRemovedEvent.builder()
-                .commentId(commentId)
-                .userId(currentUserId)
-                .postId(comment.getPostId())
-                .build();
-
-        commentEventProducer.sendCommentRemovedEvent(commentRemovedEvent);
+        outboxService.create(comment, OutboxEventType.COMMENT_REMOVED);
 
         redisCacheInvalidator.evictPostsCache(comment.getPostId());
         if (comment.getParent() != null) {
