@@ -44,15 +44,6 @@ public class Comment {
     @Builder.Default
     private List<Comment> replies = new ArrayList<>();
 
-    public void addReply(Comment reply) {
-        reply.setParent(this);
-        this.replies.add(reply);
-    }
-
-    public boolean isRootComment() {
-        return parent == null;
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

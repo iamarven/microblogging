@@ -1,9 +1,9 @@
 package com.merfonteen.commentservice.service.impl;
 
 import com.merfonteen.commentservice.client.PostClient;
+import com.merfonteen.commentservice.dto.CommentCreateRequest;
 import com.merfonteen.commentservice.dto.CommentPageResponse;
 import com.merfonteen.commentservice.dto.CommentReplyRequest;
-import com.merfonteen.commentservice.dto.CommentCreateRequest;
 import com.merfonteen.commentservice.dto.CommentResponse;
 import com.merfonteen.commentservice.dto.CommentUpdateRequest;
 import com.merfonteen.commentservice.dto.CommentsOnPostSearchRequest;
@@ -13,9 +13,10 @@ import com.merfonteen.commentservice.mapper.CommentMapper;
 import com.merfonteen.commentservice.model.Comment;
 import com.merfonteen.commentservice.repository.CommentRepository;
 import com.merfonteen.commentservice.service.CommentService;
+import com.merfonteen.commentservice.service.redis.CommentRateLimiter;
+import com.merfonteen.commentservice.service.redis.RedisCacheInvalidator;
 import com.merfonteen.commentservice.service.redis.RedisCounter;
 import com.merfonteen.commentservice.util.AuthUtil;
-import com.merfonteen.commentservice.service.redis.CommentRateLimiter;
 import com.merfonteen.exceptions.NotFoundException;
 import com.merfonteen.kafkaEvents.CommentCreatedEvent;
 import com.merfonteen.kafkaEvents.CommentRemovedEvent;
@@ -24,9 +25,7 @@ import feign.FeignException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.Caching;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -49,8 +48,12 @@ public class CommentServiceImpl implements CommentService {
     private final CommentRepository commentRepository;
     private final CommentRateLimiter commentRateLimiter;
     private final CommentEventProducer commentEventProducer;
+    private final RedisCacheInvalidator redisCacheInvalidator;
 
-    @Cacheable(value = COMMENTS_BY_POST_ID_CACHE, key = "#searchRequest.getPostId()")
+    @Cacheable(value = COMMENTS_BY_POST_ID_CACHE, key = "#searchRequest.getPostId() + " +
+                                                        "':' + #searchRequest.page + " +
+                                                        "':' + #searchRequest.size + " +
+                                                        "':' + #searchRequest.sortBy")
     @Override
     public CommentPageResponse getCommentsOnPost(CommentsOnPostSearchRequest searchRequest) {
         PageRequest pageRequest = commentMapper.buildPageRequest(searchRequest);
@@ -62,10 +65,10 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public Long getCommentCountForPost(Long postId) {
-        String cacheValue = redisCounter.getCachedValue(redisCounter.getCommentsCacheKey(postId));
+        String cachedValue = redisCounter.getCachedValue(redisCounter.getCommentsCacheKey(postId));
 
-        if(cacheValue != null) {
-            return Long.parseLong(cacheValue);
+        if (cachedValue != null) {
+            return Long.parseLong(cachedValue);
         }
 
         long countFromDb = commentRepository.countAllByPostId(postId);
@@ -74,7 +77,9 @@ public class CommentServiceImpl implements CommentService {
         return countFromDb;
     }
 
-    @Cacheable(value = COMMENT_REPLIES_CACHE, key = "#parentId")
+    @Cacheable(value = COMMENT_REPLIES_CACHE, key = "#parentId + " +
+                                                    "':' + #searchRequest.page + " +
+                                                    "':' + #searchRequest.size")
     @Override
     public CommentPageResponse getReplies(Long parentId, RepliesOnCommentSearchRequest searchRequest) {
         getCommentByIdOrThrowException(parentId);
@@ -88,9 +93,9 @@ public class CommentServiceImpl implements CommentService {
 
     @Override
     public Long getRepliesCountForComment(Long commentId) {
-        String cachedValue = redisCounter.getRepliesCacheKey(commentId);
+        String cachedValue = redisCounter.getCachedValue(redisCounter.getRepliesCacheKey(commentId));
 
-        if(cachedValue != null) {
+        if (cachedValue != null) {
             return Long.parseLong(cachedValue);
         }
 
@@ -100,11 +105,12 @@ public class CommentServiceImpl implements CommentService {
         return countFromDb;
     }
 
-    @CacheEvict(value = COMMENTS_BY_POST_ID_CACHE, key = "#requestDto.getPostId()")
     @Transactional
     @Override
     public CommentResponse createComment(CommentCreateRequest requestDto, Long currentUserId) {
         checkPostExistsOrThrowException(requestDto.getPostId());
+
+        commentRateLimiter.limitLeavingComments(currentUserId);
 
         Comment comment = Comment.builder()
                 .postId(requestDto.getPostId())
@@ -112,8 +118,6 @@ public class CommentServiceImpl implements CommentService {
                 .content(requestDto.getContent())
                 .createdAt(Instant.now())
                 .build();
-
-        commentRateLimiter.limitLeavingComments(currentUserId);
 
         Comment savedComment = commentRepository.save(comment);
         log.info("Comment '{}' saved to database successfully", savedComment.getId());
@@ -126,19 +130,18 @@ public class CommentServiceImpl implements CommentService {
 
         commentEventProducer.sendCommentCreatedEvent(commentCreatedEvent);
 
+        redisCacheInvalidator.evictPostsCache(requestDto.getPostId());
         redisCounter.incrementCounter(redisCounter.getCommentsCacheKey(savedComment.getPostId()));
 
         return commentMapper.toDto(savedComment);
     }
 
-    @Caching(evict = {
-            @CacheEvict(value = COMMENTS_BY_POST_ID_CACHE, key = "#result.getPostId()"),
-            @CacheEvict(value = COMMENT_REPLIES_CACHE, key = "#replyRequest.getParentId()")
-    })
     @Transactional
     @Override
     public CommentResponse createReply(CommentReplyRequest replyRequest, Long currentUserId) {
         Comment parent = getCommentByIdOrThrowException(replyRequest.getParentId());
+
+        commentRateLimiter.limitLeavingComments(currentUserId);
 
         Comment reply = Comment.builder()
                 .parent(parent)
@@ -148,17 +151,17 @@ public class CommentServiceImpl implements CommentService {
                 .createdAt(Instant.now())
                 .build();
 
-        commentRateLimiter.limitLeavingComments(currentUserId);
-
         Comment saved = commentRepository.save(reply);
         log.info("Added nested comment '{}' to comment '{}'", saved.getId(), parent.getId());
 
-        redisCounter.incrementCounter(redisCounter.getRepliesCacheKey(saved.getId()));
+        redisCacheInvalidator.evictPostsCache(parent.getPostId());
+        redisCacheInvalidator.evictRepliesCache(saved.getId());
+
+        redisCounter.incrementCounter(redisCounter.getRepliesCacheKey(parent.getId()));
 
         return commentMapper.toDto(saved);
     }
 
-    @CacheEvict(value = COMMENTS_BY_POST_ID_CACHE, key = "#result.getPostId()")
     @Transactional
     @Override
     public CommentResponse updateComment(Long commentId, CommentUpdateRequest updateDto, Long currentUserId) {
@@ -172,13 +175,11 @@ public class CommentServiceImpl implements CommentService {
         Comment savedComment = commentRepository.save(commentToUpdate);
         log.info("Comment '{}' was successfully updated", savedComment.getId());
 
+        redisCacheInvalidator.evictPostsCache(savedComment.getPostId());
+
         return commentMapper.toDto(savedComment);
     }
 
-    @Caching(evict = {
-            @CacheEvict(value = COMMENTS_BY_POST_ID_CACHE, key = "#result.getPostId()"),
-            @CacheEvict(value = COMMENT_REPLIES_CACHE, key = "#result.getParentId()")
-    })
     @Transactional
     @Override
     public void deleteComment(Long commentId, Long currentUserId) {
@@ -196,19 +197,19 @@ public class CommentServiceImpl implements CommentService {
 
         commentEventProducer.sendCommentRemovedEvent(commentRemovedEvent);
 
+        redisCacheInvalidator.evictPostsCache(comment.getPostId());
+        if (comment.getParent() != null) {
+            redisCacheInvalidator.evictRepliesCache(comment.getParent().getId());
+        }
         redisCounter.decrementCounter(redisCounter.getCommentsCacheKey(comment.getPostId()));
     }
 
-    // TO DO: update reply
-
-    // TO DO: delete reply
-
-    @CacheEvict(value = COMMENTS_BY_POST_ID_CACHE, key = "#event.getPostId()")
     @Transactional
     @Override
     public void removeCommentsOnPost(PostRemovedEvent event) {
         int count = commentRepository.deleteAllByPostId(event.getPostId());
         log.info("Deleted {} comments for postId={}", count, event.getPostId());
+        redisCacheInvalidator.evictPostsCache(event.getPostId());
     }
 
     private Comment getCommentByIdOrThrowException(Long commentId) {
