@@ -44,10 +44,10 @@ class CommentServiceImplTest {
     private PostClient postClient;
 
     @Mock
-    private CommentMapper commentMapper;
+    private RedisCounter redisCounter;
 
     @Mock
-    private RedisCounter redisCounter;
+    private CommentMapper commentMapper;
 
     @Mock
     private CommentRepository commentRepository;

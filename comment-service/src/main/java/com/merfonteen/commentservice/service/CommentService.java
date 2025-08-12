@@ -19,7 +19,7 @@ public interface CommentService {
 
     CommentResponse updateComment(Long commentId, CommentUpdateRequest updateDto, Long currentUserId);
 
-    CommentResponse deleteComment(Long commentId, Long currentUserId);
+    void deleteComment(Long commentId, Long currentUserId);
 
     void removeCommentsOnPost(PostRemovedEvent event);
 }

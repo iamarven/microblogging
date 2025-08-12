@@ -181,7 +181,7 @@ public class CommentServiceImpl implements CommentService {
     })
     @Transactional
     @Override
-    public CommentResponse deleteComment(Long commentId, Long currentUserId) {
+    public void deleteComment(Long commentId, Long currentUserId) {
         Comment comment = getCommentByIdOrThrowException(commentId);
         AuthUtil.validateChangingComment(currentUserId, comment.getUserId());
 
@@ -197,8 +197,6 @@ public class CommentServiceImpl implements CommentService {
         commentEventProducer.sendCommentRemovedEvent(commentRemovedEvent);
 
         redisCounter.decrementCounter(redisCounter.getCommentsCacheKey(comment.getPostId()));
-
-        return commentMapper.toDto(comment);
     }
 
     // TO DO: update reply
