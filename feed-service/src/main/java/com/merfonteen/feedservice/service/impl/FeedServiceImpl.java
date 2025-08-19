@@ -38,7 +38,9 @@ public class FeedServiceImpl implements FeedService {
     private final FeedCacheInvalidator feedCacheInvalidator;
     private final SubscriptionRepository subscriptionRepository;
 
-    @Cacheable(value = CacheNames.FEED_CACHE, key = "#currentUserId")
+    @Cacheable(value = CacheNames.FEED_CACHE, key = "#currentUserId + " +
+                                                    "':' + #searchRequest.page + " +
+                                                     "':' + #searchRequest.size")
     @Override
     public FeedPageResponse getMyFeed(Long currentUserId, FeedSearchRequest searchRequest) {
         PageRequest pageRequest = feedMapper.buildPageRequest(searchRequest);
@@ -56,7 +58,7 @@ public class FeedServiceImpl implements FeedService {
         List<Feed> buffer = new ArrayList<>();
         Set<Long> userIdsToEvictCache = new HashSet<>();
 
-        for(Subscription subscription : subscriptions) {
+        for (Subscription subscription : subscriptions) {
             buffer.add(Feed.builder()
                     .postId(event.getPostId())
                     .userId(subscription.getFollowerId())
@@ -65,17 +67,17 @@ public class FeedServiceImpl implements FeedService {
 
             userIdsToEvictCache.add(subscription.getFollowerId());
 
-            if(buffer.size() == 50) {
+            if (buffer.size() == 50) {
                 safeSaveFeeds(buffer);
                 buffer.clear();
             }
         }
 
-        if(!userIdsToEvictCache.isEmpty()) {
+        if (!userIdsToEvictCache.isEmpty()) {
             feedCacheInvalidator.evictFeedCache(userIdsToEvictCache);
         }
 
-        if(!buffer.isEmpty()) {
+        if (!buffer.isEmpty()) {
             safeSaveFeeds(buffer);
         }
     }

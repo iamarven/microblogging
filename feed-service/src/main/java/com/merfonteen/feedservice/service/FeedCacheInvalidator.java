@@ -18,7 +18,7 @@ public class FeedCacheInvalidator {
 
     public void evictFeedCache(Set<Long> userIdsToEvictCache) {
         for (Long userId : userIdsToEvictCache) {
-            String pattern = "feed::" + userId;
+            String pattern = "feed::" + userId + ":*";
             Set<String> keys = new HashSet<>();
             try (Cursor<String> scan = redisTemplate.scan(ScanOptions.scanOptions()
                     .match(pattern)

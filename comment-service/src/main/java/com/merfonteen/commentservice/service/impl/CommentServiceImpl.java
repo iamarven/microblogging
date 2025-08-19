@@ -8,7 +8,6 @@ import com.merfonteen.commentservice.dto.CommentResponse;
 import com.merfonteen.commentservice.dto.CommentUpdateRequest;
 import com.merfonteen.commentservice.dto.CommentsOnPostSearchRequest;
 import com.merfonteen.commentservice.dto.RepliesOnCommentSearchRequest;
-import com.merfonteen.commentservice.kafka.eventProducer.CommentEventProducer;
 import com.merfonteen.commentservice.mapper.CommentMapper;
 import com.merfonteen.commentservice.model.Comment;
 import com.merfonteen.commentservice.model.enums.OutboxEventType;
@@ -20,8 +19,6 @@ import com.merfonteen.commentservice.service.redis.RedisCacheInvalidator;
 import com.merfonteen.commentservice.service.redis.RedisCounter;
 import com.merfonteen.commentservice.util.AuthUtil;
 import com.merfonteen.exceptions.NotFoundException;
-import com.merfonteen.kafkaEvents.CommentCreatedEvent;
-import com.merfonteen.kafkaEvents.CommentRemovedEvent;
 import com.merfonteen.kafkaEvents.PostRemovedEvent;
 import feign.FeignException;
 import jakarta.transaction.Transactional;
@@ -47,10 +44,10 @@ public class CommentServiceImpl implements CommentService {
     private final PostClient postClient;
     private final RedisCounter redisCounter;
     private final CommentMapper commentMapper;
+    private final OutboxService outboxService;
     private final CommentRepository commentRepository;
     private final CommentRateLimiter commentRateLimiter;
     private final RedisCacheInvalidator redisCacheInvalidator;
-    private final OutboxService outboxService;
 
     @Cacheable(value = COMMENTS_BY_POST_ID_CACHE, key = "#searchRequest.getPostId() + " +
                                                         "':' + #searchRequest.page + " +

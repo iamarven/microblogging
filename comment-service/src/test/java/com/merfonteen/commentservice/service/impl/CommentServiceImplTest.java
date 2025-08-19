@@ -11,7 +11,9 @@ import com.merfonteen.commentservice.mapper.CommentMapper;
 import com.merfonteen.commentservice.model.Comment;
 import com.merfonteen.commentservice.model.enums.CommentSortField;
 import com.merfonteen.commentservice.repository.CommentRepository;
+import com.merfonteen.commentservice.service.OutboxService;
 import com.merfonteen.commentservice.service.redis.CommentRateLimiter;
+import com.merfonteen.commentservice.service.redis.RedisCacheInvalidator;
 import com.merfonteen.commentservice.service.redis.RedisCounter;
 import com.merfonteen.exceptions.ForbiddenException;
 import com.merfonteen.exceptions.NotFoundException;
@@ -50,13 +52,16 @@ class CommentServiceImplTest {
     private CommentMapper commentMapper;
 
     @Mock
+    private OutboxService outboxService;
+
+    @Mock
     private CommentRepository commentRepository;
 
     @Mock
     private CommentRateLimiter commentRateLimiter;
 
     @Mock
-    private CommentEventProducer commentEventProducer;
+    private RedisCacheInvalidator redisCacheInvalidator;
 
     @InjectMocks
     private CommentServiceImpl commentService;
@@ -124,6 +129,7 @@ class CommentServiceImplTest {
         assertEquals(responseDto.getId(), result.getId());
         verify(commentRateLimiter).limitLeavingComments(USER_ID);
         verify(redisCounter).incrementCounter(buildCommentCountCacheKey(POST_ID));
+        verify(redisCacheInvalidator).evictPostsCache(POST_ID);
     }
 
     @Test
@@ -149,6 +155,7 @@ class CommentServiceImplTest {
         CommentResponse result = commentService.updateComment(COMMENT_ID, updateRequest, USER_ID);
 
         assertThat(result).isEqualTo(responseDto);
+        verify(redisCacheInvalidator).evictPostsCache(POST_ID);
     }
 
     @Test
@@ -177,16 +184,15 @@ class CommentServiceImplTest {
     @Test
     void testDeleteComment_Success() {
         Comment comment = buildComment();
-        CommentResponse responseDto = buildCommentResponse(comment);
 
         when(commentRepository.findById(COMMENT_ID)).thenReturn(Optional.of(comment));
-        when(commentMapper.toDto(comment)).thenReturn(responseDto);
         when(redisCounter.getCommentsCacheKey(COMMENT_ID)).thenReturn(buildCommentCountCacheKey(COMMENT_ID));
 
         commentService.deleteComment(COMMENT_ID, USER_ID);
 
         verify(commentRepository).delete(comment);
         verify(redisCounter).decrementCounter(buildCommentCountCacheKey(POST_ID));
+        verify(redisCacheInvalidator).evictPostsCache(POST_ID);
     }
 
     @Test
