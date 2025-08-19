@@ -8,14 +8,14 @@ import com.merfonteen.postservice.dto.PostUpdateRequest;
 import com.merfonteen.postservice.dto.PostsSearchRequest;
 import com.merfonteen.postservice.dto.UserPostsPageResponse;
 import com.merfonteen.postservice.mapper.PostMapper;
-import com.merfonteen.postservice.model.OutboxEvent;
 import com.merfonteen.postservice.model.Post;
 import com.merfonteen.postservice.model.enums.OutboxEventType;
 import com.merfonteen.postservice.repository.PostRepository;
 import com.merfonteen.postservice.service.OutboxService;
 import com.merfonteen.postservice.service.PostService;
-import com.merfonteen.postservice.service.redis.RedisRateLimiter;
-import com.merfonteen.postservice.service.redis.StringRedisCounter;
+import com.merfonteen.postservice.service.redis.PostRateLimiter;
+import com.merfonteen.postservice.service.redis.RedisCacheInvalidator;
+import com.merfonteen.postservice.service.redis.RedisCounter;
 import com.merfonteen.postservice.util.AuthUtil;
 import com.merfonteen.postservice.util.PostValidator;
 import jakarta.transaction.Transactional;
@@ -42,8 +42,9 @@ public class PostServiceImpl implements PostService {
     private final PostValidator postValidator;
     private final OutboxService outboxService;
     private final PostRepository postRepository;
-    private final StringRedisCounter redisCounter;
-    private final RedisRateLimiter redisRateLimiter;
+    private final RedisCounter redisCounter;
+    private final PostRateLimiter postRateLimiter;
+    private final RedisCacheInvalidator redisCacheInvalidator;
 
     @Cacheable(value = CacheNames.POST_BY_ID, key = "#id")
     @Override
@@ -59,12 +60,12 @@ public class PostServiceImpl implements PostService {
         return post.getAuthorId();
     }
 
-    @Cacheable(value = CacheNames.USER_POSTS, key = "#userId")
+    @Cacheable(value = CacheNames.USER_POSTS, key = "#userId + ':' + #searchRequest.page + ':' + #searchRequest.size")
     @Override
-    public UserPostsPageResponse getUserPosts(Long userId, PostsSearchRequest request) {
+    public UserPostsPageResponse getUserPosts(Long userId, PostsSearchRequest searchRequest) {
         postValidator.checkUserExists(userId);
 
-        Pageable pageable = postMapper.buildPageable(request);
+        Pageable pageable = postMapper.buildPageable(searchRequest);
         Page<Post> userPostsPage = postRepository.findAllByAuthorId(userId, pageable);
         List<PostResponse> userPostsDto = postMapper.toListDtos(userPostsPage.getContent());
 
@@ -82,16 +83,15 @@ public class PostServiceImpl implements PostService {
         }
 
         Long numberOfPostsFromDb = postRepository.countByAuthorId(userId);
-        redisCounter.putCounter(userId, numberOfPostsFromDb);
+        redisCounter.setCounter(userId, numberOfPostsFromDb);
 
         return numberOfPostsFromDb;
     }
 
-    @CacheEvict(value = CacheNames.USER_POSTS, key = "#currentUserId")
     @Transactional
     @Override
     public PostResponse createPost(Long currentUserId, PostCreateRequest request) {
-        redisRateLimiter.validatePostCreationLimit(currentUserId);
+        postRateLimiter.limitPostCreation(currentUserId);
 
         Post post = Post.builder()
                 .authorId(currentUserId)
@@ -103,16 +103,14 @@ public class PostServiceImpl implements PostService {
         log.info("Post with id '{}' successfully created by user '{}'", savedPost.getId(), currentUserId);
 
         outboxService.create(savedPost, OutboxEventType.POST_CREATED);
+
+        redisCacheInvalidator.evictUserPostsCache(currentUserId);
         redisCounter.incrementCounter(currentUserId);
 
         return postMapper.toDto(savedPost);
     }
 
-    @Caching(
-            evict = {
-                    @CacheEvict(value = CacheNames.POST_BY_ID, key = "#id"),
-                    @CacheEvict(value = CacheNames.USER_POSTS, key = "#currentUserId")
-            })
+    @CacheEvict(value = CacheNames.POST_BY_ID, key = "#id")
     @Transactional
     @Override
     public PostResponse updatePost(Long id, PostUpdateRequest updateDto, Long currentUserId) {
@@ -125,14 +123,12 @@ public class PostServiceImpl implements PostService {
         Post updatedPost = postRepository.save(postToUpdate);
         log.info("Post with id '{}' successfully updated by user with id: '{}'", id, currentUserId);
 
+        redisCacheInvalidator.evictUserPostsCache(currentUserId);
+
         return postMapper.toDto(updatedPost);
     }
 
-    @Caching(
-            evict = {
-                    @CacheEvict(value = CacheNames.POST_BY_ID, key = "#id"),
-                    @CacheEvict(value = CacheNames.USER_POSTS, key = "#currentUserId")
-            })
+    @CacheEvict(value = CacheNames.POST_BY_ID, key = "#id")
     @Transactional
     @Override
     public void deletePost(Long id, Long currentUserId) {
@@ -143,6 +139,7 @@ public class PostServiceImpl implements PostService {
         log.info("Post with id '{}' successfully deleted by user '{}'", id, currentUserId);
 
         outboxService.create(postToDelete, OutboxEventType.POST_REMOVED);
+        redisCacheInvalidator.evictUserPostsCache(currentUserId);
         redisCounter.decrementCounter(currentUserId);
     }
 

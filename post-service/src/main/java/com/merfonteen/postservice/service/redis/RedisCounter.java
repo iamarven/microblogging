@@ -8,7 +8,7 @@ import java.time.Duration;
 
 @RequiredArgsConstructor
 @Component
-public class StringRedisCounter {
+public class RedisCounter {
     private final StringRedisTemplate stringRedisTemplate;
 
     private static final String CACHE_KEY = "post:count:user:";
@@ -34,7 +34,7 @@ public class StringRedisCounter {
         }
     }
 
-    public void putCounter(Long userId, Long numberOfPostsFromDb) {
+    public void setCounter(Long userId, Long numberOfPostsFromDb) {
         String key = getCacheKey(userId);
         stringRedisTemplate.opsForValue().set(key, String.valueOf(numberOfPostsFromDb), Duration.ofMinutes(10));
     }

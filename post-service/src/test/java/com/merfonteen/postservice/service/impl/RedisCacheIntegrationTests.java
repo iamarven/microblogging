@@ -68,7 +68,6 @@ public class RedisCacheIntegrationTests extends AbstractRedisIntegrationTest {
         Post post = getSavedPost();
 
         testRestTemplate.getForEntity(POSTS_URL + post.getId(), PostResponse.class);
-
         assertThat(redisOps.get(buildPostByIdCacheKey(post.getId()))).isNotNull();
     }
 
@@ -166,7 +165,7 @@ public class RedisCacheIntegrationTests extends AbstractRedisIntegrationTest {
     }
 
     static String buildUserPostsCacheKey(Long postAuthorId) {
-        return USER_POSTS_CACHE_KEY + postAuthorId;
+        return USER_POSTS_CACHE_KEY + postAuthorId + ":0" + ":10";
     }
 
     static String buildPostByIdCacheKey(Long postId) {

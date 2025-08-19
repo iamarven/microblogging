@@ -13,8 +13,8 @@ import java.util.List;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class CommentPageResponseDto implements Serializable {
-    List<CommentResponseDto> commentDtos;
+public class CommentPageResponse implements Serializable {
+    List<CommentResponse> commentDtos;
     @JsonProperty("current_page")
     private Integer currentPage;
     @JsonProperty("total_pages")

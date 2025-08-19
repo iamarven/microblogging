@@ -1,21 +1,22 @@
 package com.merfonteen.commentservice.service.impl;
 
 import com.merfonteen.commentservice.client.PostClient;
-import com.merfonteen.commentservice.dto.CommentPageResponseDto;
-import com.merfonteen.commentservice.dto.CommentRequestDto;
-import com.merfonteen.commentservice.dto.CommentResponseDto;
-import com.merfonteen.commentservice.dto.CommentUpdateDto;
+import com.merfonteen.commentservice.dto.CommentCreateRequest;
+import com.merfonteen.commentservice.dto.CommentPageResponse;
+import com.merfonteen.commentservice.dto.CommentResponse;
+import com.merfonteen.commentservice.dto.CommentUpdateRequest;
+import com.merfonteen.commentservice.dto.CommentsOnPostSearchRequest;
 import com.merfonteen.commentservice.kafka.eventProducer.CommentEventProducer;
 import com.merfonteen.commentservice.mapper.CommentMapper;
 import com.merfonteen.commentservice.model.Comment;
 import com.merfonteen.commentservice.model.enums.CommentSortField;
 import com.merfonteen.commentservice.repository.CommentRepository;
-import com.merfonteen.commentservice.util.CommentRateLimiter;
-import com.merfonteen.commentservice.util.RedisCacheCleaner;
+import com.merfonteen.commentservice.service.OutboxService;
+import com.merfonteen.commentservice.service.redis.CommentRateLimiter;
+import com.merfonteen.commentservice.service.redis.RedisCacheInvalidator;
+import com.merfonteen.commentservice.service.redis.RedisCounter;
 import com.merfonteen.exceptions.ForbiddenException;
 import com.merfonteen.exceptions.NotFoundException;
-import com.merfonteen.kafkaEvents.CommentCreatedEvent;
-import com.merfonteen.kafkaEvents.CommentRemovedEvent;
 import feign.FeignException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,16 +27,16 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
+import static com.merfonteen.commentservice.service.impl.CommentServiceImplTest.TestResources.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -45,281 +46,257 @@ class CommentServiceImplTest {
     private PostClient postClient;
 
     @Mock
+    private RedisCounter redisCounter;
+
+    @Mock
     private CommentMapper commentMapper;
+
+    @Mock
+    private OutboxService outboxService;
 
     @Mock
     private CommentRepository commentRepository;
 
     @Mock
-    private RedisCacheCleaner redisCacheCleaner;
-
-    @Mock
     private CommentRateLimiter commentRateLimiter;
 
     @Mock
-    private StringRedisTemplate stringRedisTemplate;
-
-    @Mock
-    private ValueOperations<String, String> valueOperations;
-
-    @Mock
-    private CommentEventProducer commentEventProducer;
+    private RedisCacheInvalidator redisCacheInvalidator;
 
     @InjectMocks
     private CommentServiceImpl commentService;
 
     @Test
     void testGetCommentsOnPost_ShouldReturnPageWithComments() {
-        Long postId = 1L;
-        int page = 0;
-        int size = 10;
-        CommentSortField sortField = CommentSortField.CREATED_AT;
-        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, sortField.getFieldName()));
+        CommentsOnPostSearchRequest searchRequest = buildCommentsOnPostSearchRequest();
+        List<CommentResponse> dtos = List.of(buildCommentResponse(buildComment()));
+        PageRequest pageRequest = buildPageRequest(searchRequest);
+        Page<Comment> commentsPage = new PageImpl<>(List.of(buildComment()));
+        CommentPageResponse expected = buildCommentPageResponse(commentsPage, dtos);
 
-        Comment comment = Comment.builder()
-                .id(1L)
-                .postId(postId)
-                .userId(2L)
-                .content("content")
-                .createdAt(Instant.now())
-                .build();
+        when(commentRepository.findAllByPostId(POST_ID, pageRequest)).thenReturn(commentsPage);
+        when(commentMapper.toDtos(List.of(buildComment()))).thenReturn(dtos);
+        when(commentMapper.buildPageRequest(searchRequest)).thenReturn(pageRequest);
+        when(commentMapper.buildCommentPageResponse(commentsPage, dtos)).thenReturn(expected);
 
-        CommentResponseDto dto = CommentResponseDto.builder()
-                .id(1L)
-                .postId(postId)
-                .userId(2L)
-                .content("content")
-                .createdAt(comment.getCreatedAt())
-                .build();
+        CommentPageResponse result = commentService.getCommentsOnPost(searchRequest);
 
-        when(commentRepository.findAllByPostId(postId, pageRequest)).thenReturn(new PageImpl<>(List.of(comment)));
-        when(commentMapper.toDtos(List.of(comment))).thenReturn(List.of(dto));
-
-        CommentPageResponseDto result = commentService.getCommentsOnPost(postId, page, size, sortField);
-
-        assertEquals(1, result.getCommentDtos().size());
-        assertEquals(dto.getId(), result.getCommentDtos().getFirst().getId());
-        assertEquals(page, result.getCurrentPage());
-        assertEquals(1L, result.getTotalElements());
-        verify(commentRepository).findAllByPostId(postId, pageRequest);
-        verify(commentMapper).toDtos(List.of(comment));
-    }
-
-    @Test
-    void testGetCommentsOnPost_WhenSizeGreaterThanLimit_ShouldUseMaxLimit() {
-        Long postId = 1L;
-        int page = 0;
-        int requestedSize = 150;
-        CommentSortField sortField = CommentSortField.CREATED_AT;
-        PageRequest limited = PageRequest.of(page, 100, Sort.by(Sort.Direction.DESC, sortField.getFieldName()));
-
-        when(commentRepository.findAllByPostId(postId, limited)).thenReturn(Page.empty());
-        when(commentMapper.toDtos(anyList())).thenReturn(List.of());
-
-        commentService.getCommentsOnPost(postId, page, requestedSize, sortField);
-
-        verify(commentRepository).findAllByPostId(postId, limited);
+        assertThat(result).isEqualTo(expected);
+        verify(commentRepository).findAllByPostId(POST_ID, pageRequest);
     }
 
     @Test
     void testGetCommentCountForPost_WhenValueInCache_ShouldReturnCachedValue() {
-        Long postId = 1L;
-        String cacheKey = "comment:count:post:" + postId;
-        when(stringRedisTemplate.opsForValue()).thenReturn(valueOperations);
-        when(valueOperations.get(cacheKey)).thenReturn("5");
+        String cacheKey = buildCommentCountCacheKey(POST_ID);
 
-        Long result = commentService.getCommentCountForPost(postId);
+        when(redisCounter.getCommentsCacheKey(POST_ID)).thenReturn(cacheKey);
+        when(redisCounter.getCachedValue(cacheKey)).thenReturn("5");
+
+        Long result = commentService.getCommentCountForPost(POST_ID);
 
         assertEquals(5L, result);
-        verify(commentRepository, never()).countAllByPostId(postId);
+        verifyNoInteractions(commentRepository);
     }
 
     @Test
     void testGetCommentCountForPost_WhenCacheMiss_ShouldQueryDatabaseAndCacheValue() {
-        Long postId = 1L;
-        String cacheKey = "comment:count:post:" + postId;
-        when(stringRedisTemplate.opsForValue()).thenReturn(valueOperations);
-        when(valueOperations.get(cacheKey)).thenReturn(null);
-        when(commentRepository.countAllByPostId(postId)).thenReturn(3L);
+        String cacheKey = buildCommentCountCacheKey(POST_ID);
 
-        Long result = commentService.getCommentCountForPost(postId);
+        when(redisCounter.getCommentsCacheKey(POST_ID)).thenReturn(cacheKey);
+        when(redisCounter.getCachedValue(cacheKey)).thenReturn(null);
+        when(commentRepository.countAllByPostId(POST_ID)).thenReturn(5L);
 
-        assertEquals(3L, result);
-        verify(commentRepository).countAllByPostId(postId);
-        verify(valueOperations).set(cacheKey, "3", Duration.ofMinutes(10));
+        Long result = commentService.getCommentCountForPost(POST_ID);
+
+        assertEquals(5L, result);
+        verify(commentRepository).countAllByPostId(POST_ID);
+        verify(redisCounter).setCounter(cacheKey, 5L);
     }
 
     @Test
     void testCreateComment_Success() {
-        CommentRequestDto requestDto = CommentRequestDto.builder()
-                .postId(1L)
-                .content("text")
-                .build();
-        Long currentUserId = 10L;
-
-        Comment savedComment = Comment.builder()
-                .id(1L)
-                .postId(requestDto.getPostId())
-                .userId(currentUserId)
-                .content(requestDto.getContent())
-                .createdAt(Instant.now())
-                .build();
-
-        CommentResponseDto responseDto = CommentResponseDto.builder()
-                .id(savedComment.getId())
-                .postId(savedComment.getPostId())
-                .userId(savedComment.getUserId())
-                .content(savedComment.getContent())
-                .build();
+        CommentCreateRequest requestDto = buildCommentCreateRequest();
+        Comment savedComment = buildComment();
+        CommentResponse responseDto = buildCommentResponse(savedComment);
 
         doNothing().when(postClient).checkPostExists(requestDto.getPostId());
+        when(redisCounter.getCommentsCacheKey(POST_ID)).thenReturn(buildCommentCountCacheKey(POST_ID));
         when(commentRepository.save(any(Comment.class))).thenReturn(savedComment);
         when(commentMapper.toDto(savedComment)).thenReturn(responseDto);
-        when(stringRedisTemplate.opsForValue()).thenReturn(valueOperations);
 
-        CommentResponseDto result = commentService.createComment(requestDto, currentUserId);
+        CommentResponse result = commentService.createComment(requestDto, USER_ID);
 
         assertEquals(responseDto.getId(), result.getId());
-        verify(commentRateLimiter).limitLeavingComments(currentUserId);
-        verify(commentRepository).save(any(Comment.class));
-        verify(commentEventProducer).sendCommentCreatedEvent(any(CommentCreatedEvent.class));
-        verify(redisCacheCleaner).evictCommentCacheOnPostByPostId(requestDto.getPostId());
-        verify(valueOperations).increment("comment:count:post:" + savedComment.getPostId());
+        verify(commentRateLimiter).limitLeavingComments(USER_ID);
+        verify(redisCounter).incrementCounter(buildCommentCountCacheKey(POST_ID));
+        verify(redisCacheInvalidator).evictPostsCache(POST_ID);
     }
 
     @Test
     void testCreateComment_WhenPostNotFound_ShouldThrowException() {
-        CommentRequestDto dto = CommentRequestDto.builder().postId(10L).build();
+        CommentCreateRequest dto = buildCommentCreateRequest();
         doThrow(FeignException.NotFound.class)
                 .when(postClient)
                 .checkPostExists(dto.getPostId());
-        assertThrows(NotFoundException.class, () -> commentService.createComment(dto, 100L));
+        assertThrows(NotFoundException.class, () -> commentService.createComment(dto, USER_ID));
     }
 
     @Test
     void testUpdateComment_Success() {
-        Long commentId = 1L;
-        Long currentUserId = 5L;
-        CommentUpdateDto updateDto = CommentUpdateDto.builder()
-                .content("updated")
-                .build();
+        CommentUpdateRequest updateRequest = buildCommentUpdateRequest();
+        Comment comment = buildComment();
+        Comment updatedComment = buildUpdatedContent();
+        CommentResponse responseDto = buildCommentResponse(updatedComment);
 
-        Comment comment = Comment.builder()
-                .id(commentId)
-                .postId(2L)
-                .userId(currentUserId)
-                .content("old")
-                .build();
-
-        Comment updatedComment = Comment.builder()
-                .id(commentId)
-                .postId(2L)
-                .userId(currentUserId)
-                .content(updateDto.getContent())
-                .updatedAt(Instant.now())
-                .build();
-
-        CommentResponseDto responseDto = CommentResponseDto.builder()
-                .id(commentId)
-                .postId(2L)
-                .userId(currentUserId)
-                .content(updateDto.getContent())
-                .build();
-
-        when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
+        when(commentRepository.findById(COMMENT_ID)).thenReturn(Optional.of(comment));
         when(commentRepository.save(comment)).thenReturn(updatedComment);
         when(commentMapper.toDto(updatedComment)).thenReturn(responseDto);
 
-        CommentResponseDto result = commentService.updateComment(commentId, updateDto, currentUserId);
+        CommentResponse result = commentService.updateComment(COMMENT_ID, updateRequest, USER_ID);
 
-        assertEquals(updateDto.getContent(), result.getContent());
-        verify(redisCacheCleaner).evictCommentCacheOnPostByPostId(comment.getPostId());
+        assertThat(result).isEqualTo(responseDto);
+        verify(redisCacheInvalidator).evictPostsCache(POST_ID);
     }
 
     @Test
     void testUpdateComment_WhenCommentNotFound_ShouldThrowException() {
-        Long commentId = 1L;
-        CommentUpdateDto updateDto = new CommentUpdateDto();
+        CommentUpdateRequest updateDto = new CommentUpdateRequest();
 
-        when(commentRepository.findById(commentId)).thenReturn(Optional.empty());
+        when(commentRepository.findById(COMMENT_ID)).thenReturn(Optional.empty());
 
         assertThrows(NotFoundException.class,
-                () -> commentService.updateComment(commentId, updateDto, 10L));
+                () -> commentService.updateComment(COMMENT_ID, updateDto, USER_ID));
     }
 
     @Test
     void testUpdateComment_WhenNotAuthorized_ShouldThrowException() {
-        Long commentId = 10L;
-        CommentUpdateDto updateDto = new CommentUpdateDto();
-        Long currentUserId = 1L;
+        CommentUpdateRequest updateDto = new CommentUpdateRequest();
+        Comment commentToUpdate = Comment.builder().userId(ANOTHER_USER_ID).build();
 
-        Comment commentToUpdate = Comment.builder()
-                .id(commentId)
-                .userId(100L)
-                .build();
-
-        when(commentRepository.findById(commentId)).thenReturn(Optional.of(commentToUpdate));
+        when(commentRepository.findById(COMMENT_ID)).thenReturn(Optional.of(commentToUpdate));
 
         Exception exception = assertThrows(ForbiddenException.class,
-                () -> commentService.updateComment(commentId, updateDto, currentUserId));
+                () -> commentService.updateComment(COMMENT_ID, updateDto, USER_ID));
 
         assertEquals("You cannot update not your own comment", exception.getMessage());
     }
 
     @Test
     void testDeleteComment_Success() {
-        Long commentId = 1L;
-        Long currentUserId = 10L;
+        Comment comment = buildComment();
 
-        Comment comment = Comment.builder()
-                .id(commentId)
-                .postId(2L)
-                .userId(currentUserId)
-                .content("content")
-                .build();
+        when(commentRepository.findById(COMMENT_ID)).thenReturn(Optional.of(comment));
+        when(redisCounter.getCommentsCacheKey(COMMENT_ID)).thenReturn(buildCommentCountCacheKey(COMMENT_ID));
 
-        CommentResponseDto responseDto = CommentResponseDto.builder()
-                .id(commentId)
-                .postId(2L)
-                .userId(currentUserId)
-                .content("content")
-                .build();
+        commentService.deleteComment(COMMENT_ID, USER_ID);
 
-        when(commentRepository.findById(commentId)).thenReturn(Optional.of(comment));
-        when(commentMapper.toDto(comment)).thenReturn(responseDto);
-        when(stringRedisTemplate.opsForValue()).thenReturn(valueOperations);
-
-        CommentResponseDto result = commentService.deleteComment(commentId, currentUserId);
-
-        assertEquals(commentId, result.getId());
         verify(commentRepository).delete(comment);
-        verify(commentEventProducer).sendCommentRemovedEvent(any(CommentRemovedEvent.class));
-        verify(redisCacheCleaner).evictCommentCacheOnPostByPostId(comment.getPostId());
-        verify(valueOperations).decrement("comment:count:post:" + comment.getPostId());
+        verify(redisCounter).decrementCounter(buildCommentCountCacheKey(POST_ID));
+        verify(redisCacheInvalidator).evictPostsCache(POST_ID);
     }
 
     @Test
     void testDeleteComment_WhenCommentNotFound_ShouldThrowException() {
-        Long commentId = 1L;
-        when(commentRepository.findById(commentId)).thenReturn(Optional.empty());
-        assertThrows(NotFoundException.class, () -> commentService.deleteComment(commentId, 10L));
+        when(commentRepository.findById(COMMENT_ID)).thenReturn(Optional.empty());
+        assertThrows(NotFoundException.class, () -> commentService.deleteComment(COMMENT_ID, USER_ID));
     }
 
     @Test
     void testDeleteComment_WhenNotAuthorized_ShouldThrowException() {
-        Long commentId = 10L;
-        Long currentUserId = 1L;
+        Comment commentToDelete = buildComment();
 
-        Comment commentToDelete = Comment.builder()
-                .id(commentId)
-                .userId(100L)
-                .build();
-
-        when(commentRepository.findById(commentId)).thenReturn(Optional.of(commentToDelete));
+        when(commentRepository.findById(COMMENT_ID)).thenReturn(Optional.of(commentToDelete));
 
         Exception exception = assertThrows(ForbiddenException.class,
-                () -> commentService.deleteComment(commentId, currentUserId));
+                () -> commentService.deleteComment(COMMENT_ID, ANOTHER_USER_ID));
 
         assertEquals("You cannot update not your own comment", exception.getMessage());
+    }
+
+    static class TestResources {
+        static final Long POST_ID = 1L;
+        static final Long COMMENT_ID = 1L;
+        static final Long USER_ID = 1L;
+        static final Long ANOTHER_USER_ID = 100L;
+        static final int PAGE = 0;
+        static final int SIZE = 10;
+        static final String COMMENT_CONTENT = "Some content";
+        static final String NEW_CONTENT = "New content";
+        static final String COMMENT_COUNT_CACHE_KEY = "comment:count:post:";
+        static final Instant CREATED_AT = Instant.parse("2025-10-05T10:00:00.00Z");
+
+        static String buildCommentCountCacheKey(Long postId) {
+            return COMMENT_COUNT_CACHE_KEY + postId;
+        }
+
+        static CommentCreateRequest buildCommentCreateRequest() {
+            return CommentCreateRequest.builder()
+                    .postId(POST_ID)
+                    .content(COMMENT_CONTENT)
+                    .build();
+        }
+
+        static CommentUpdateRequest buildCommentUpdateRequest() {
+            return CommentUpdateRequest.builder()
+                    .content(NEW_CONTENT)
+                    .build();
+        }
+
+        static CommentsOnPostSearchRequest buildCommentsOnPostSearchRequest() {
+            return CommentsOnPostSearchRequest.builder()
+                    .postId(POST_ID)
+                    .page(PAGE)
+                    .size(SIZE)
+                    .sortBy("createdAt")
+                    .build();
+        }
+
+        static Comment buildComment() {
+            return Comment.builder()
+                    .id(COMMENT_ID)
+                    .postId(POST_ID)
+                    .userId(USER_ID)
+                    .content(COMMENT_CONTENT)
+                    .createdAt(CREATED_AT)
+                    .build();
+        }
+
+        static Comment buildUpdatedContent() {
+            return Comment.builder()
+                    .id(COMMENT_ID)
+                    .postId(POST_ID)
+                    .userId(USER_ID)
+                    .content(NEW_CONTENT)
+                    .createdAt(CREATED_AT)
+                    .build();
+        }
+
+        static CommentResponse buildCommentResponse(Comment comment) {
+            return CommentResponse.builder()
+                    .id(comment.getId())
+                    .postId(comment.getPostId())
+                    .userId(comment.getUserId())
+                    .content(comment.getContent())
+                    .createdAt(comment.getCreatedAt())
+                    .build();
+        }
+
+        static CommentPageResponse buildCommentPageResponse(Page<Comment> pageComments, List<CommentResponse> commentDtos) {
+            return CommentPageResponse.builder()
+                    .commentDtos(commentDtos)
+                    .currentPage(pageComments.getNumber())
+                    .totalPages(pageComments.getTotalPages())
+                    .totalElements(pageComments.getTotalElements())
+                    .isLastPage(pageComments.isLast())
+                    .build();
+        }
+
+        static PageRequest buildPageRequest(CommentsOnPostSearchRequest searchRequest) {
+            return PageRequest.of(
+                    searchRequest.getPage(),
+                    searchRequest.getSize(),
+                    Sort.by(Sort.Direction.DESC, CommentSortField.from(searchRequest.getSortBy()).getFieldName())
+            );
+        }
     }
 }

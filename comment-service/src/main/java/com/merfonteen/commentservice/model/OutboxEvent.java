@@ -1,6 +1,6 @@
-package com.merfonteen.postservice.model;
+package com.merfonteen.commentservice.model;
 
-import com.merfonteen.postservice.model.enums.OutboxEventType;
+import com.merfonteen.commentservice.model.enums.OutboxEventType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -25,7 +25,7 @@ import java.time.Instant;
 @AllArgsConstructor
 @Builder
 @Entity
-@Table(name = "outbox_events", schema = "post_service")
+@Table(name = "outbox_events", schema = "comment_service")
 public class OutboxEvent {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -1,6 +1,5 @@
 package com.merfonteen.commentservice.dto;
 
-import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,12 +9,11 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class CommentReplyRequestDto {
-    @NotNull
-    @Positive
-    private Long parentId;
-
-    @NotBlank
-    @Size(min = 1, max = 5000)
-    private String content;
+public class CommentsOnPostSearchRequest {
+    private Long postId;
+    @Builder.Default
+    private int page = 0;
+    @Builder.Default
+    private int size = 10;
+    private String sortBy;
 }
