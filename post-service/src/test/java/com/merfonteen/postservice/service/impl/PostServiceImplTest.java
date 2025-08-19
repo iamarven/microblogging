@@ -16,6 +16,7 @@ import com.merfonteen.postservice.model.enums.PostSortField;
 import com.merfonteen.postservice.repository.PostRepository;
 import com.merfonteen.postservice.service.OutboxService;
 import com.merfonteen.postservice.service.redis.PostRateLimiter;
+import com.merfonteen.postservice.service.redis.RedisCacheInvalidator;
 import com.merfonteen.postservice.util.PostValidator;
 import com.merfonteen.postservice.service.redis.RedisCounter;
 import org.junit.jupiter.api.Test;
@@ -59,6 +60,9 @@ class PostServiceImplTest {
 
     @Mock
     private OutboxService outboxService;
+
+    @Mock
+    private RedisCacheInvalidator redisCacheInvalidator;
 
     @InjectMocks
     private PostServiceImpl postService;
