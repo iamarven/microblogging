@@ -18,7 +18,7 @@ public class RedisCacheInvalidator {
     private final RedisTemplate<String, Object> redisTemplate;
 
     public void evictUserPostsCache(Long userId) {
-        String pattern = CacheNames.USER_POSTS + userId + "*:";
+        String pattern = CacheNames.USER_POSTS + "::" + userId + ":*";
         Set<String> keys = new HashSet<>();
         try (Cursor<String> scan = redisTemplate.scan(ScanOptions.scanOptions()
                 .match(pattern)

@@ -60,7 +60,7 @@ public class PostServiceImpl implements PostService {
         return post.getAuthorId();
     }
 
-    @Cacheable(value = CacheNames.USER_POSTS, key = "#userId + ':' + #searchRequest.page + ':' + searchRequest.size")
+    @Cacheable(value = CacheNames.USER_POSTS, key = "#userId + ':' + #searchRequest.page + ':' + #searchRequest.size")
     @Override
     public UserPostsPageResponse getUserPosts(Long userId, PostsSearchRequest searchRequest) {
         postValidator.checkUserExists(userId);
