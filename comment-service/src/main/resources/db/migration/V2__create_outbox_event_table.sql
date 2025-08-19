@@ -1,4 +1,4 @@
-CREATE TABLE post_service.outbox_events
+CREATE TABLE comment_service.outbox_events
 (
     id BIGSERIAL PRIMARY KEY,
     aggregate_type VARCHAR NOT NULL,
