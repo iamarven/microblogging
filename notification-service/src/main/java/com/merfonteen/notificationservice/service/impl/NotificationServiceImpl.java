@@ -27,7 +27,9 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -92,12 +94,14 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public NotificationResponse markAsRead(Long notificationId, Long currentUserId) {
         Notification notification = getNotificationByIdAndReceiverId(notificationId, currentUserId);
-        notification.setIsRead(true);
-        Notification saved = notificationRepository.save(notification);
+        if (notification.getIsRead().equals(Boolean.FALSE)) {
+            notification.setIsRead(true);
+            Notification saved = notificationRepository.save(notification);
+            redisCounter.decrementCounter(currentUserId);
+            return notificationMapper.toDto(saved);
 
-        redisCounter.decrementCounter(currentUserId);
-
-        return notificationMapper.toDto(saved);
+        }
+        return notificationMapper.toDto(notification);
     }
 
     @Transactional
@@ -122,12 +126,16 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     @Override
     public void deleteNotificationsForEntity(Long entityId, NotificationType type) {
-        log.info("Deleting all notifications for entity with id '{}' and type: {}", entityId, type);
         List<Notification> notificationsToDelete = notificationRepository.findByEntityIdAndType(entityId, type);
-        if (notificationsToDelete.isEmpty()) {
-            return;
-        }
+        if (notificationsToDelete.isEmpty()) return;
+
+        Map<Long, List<Notification>> byReceiver =
+                notificationsToDelete.stream().collect(Collectors.groupingBy(Notification::getReceiverId));
+
         notificationRepository.deleteAll(notificationsToDelete);
+        log.info("Deleted {} notifications by receiver '{}'", notificationsToDelete.size(), entityId);
+
+        byReceiver.keySet().forEach(redisCounter::refreshCountUnreadNotifications);
     }
 
     @Transactional
@@ -158,7 +166,7 @@ public class NotificationServiceImpl implements NotificationService {
                 redisCounter.incrementCounter(subscription.getFollowerId());
 
                 if (buffer.size() == 50) {
-                    notificationRepository.saveAll(buffer);
+                    safeSaveNotifications(buffer);
                     buffer.clear();
                 }
             }

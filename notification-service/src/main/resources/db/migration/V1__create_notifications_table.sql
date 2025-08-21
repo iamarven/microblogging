@@ -11,3 +11,6 @@ CREATE TABLE notification_service.notifications
     is_read     BOOLEAN     NOT NULL,
     created_at  TIMESTAMP   NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX idx_notifications_receiver_id ON notification_service.notifications(receiver_id);
+CREATE INDeX idx_notification_entity_id_type ON notification_service.notifications(entity_id, type);

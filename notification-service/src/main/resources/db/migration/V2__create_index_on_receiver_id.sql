@@ -1,1 +1,0 @@
-CREATE INDEX idx_notifications_receiver_id ON notification_service.notifications(receiver_id);
