@@ -12,11 +12,16 @@ import java.util.Optional;
 
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
+
     Page<Notification> findAllByReceiverId(Long receiverId, Pageable pageable);
+
     Page<Notification> findAllByReceiverIdAndIsReadTrue(Long receiverId, Pageable pageable);
-    Page<Notification> findAllByReceiverIdAndIsReadFalse(Long receiverId, Pageable pageable);
-    List<Notification> findAllByEntityIdAndType(Long entityId, NotificationType type);
-    long countAllByReceiverIdAndIsReadFalse(Long receiverId);
+
     Optional<Notification> findByIdAndReceiverId(Long id, Long receiverId);
-    void deleteByEntityIdAndType(Long entityId, NotificationType type);
+
+    Page<Notification> findAllByReceiverIdAndIsReadFalse(Long receiverId, Pageable pageable);
+
+    List<Notification> findByEntityIdAndType(Long entityId, NotificationType type);
+
+    long countAllByReceiverIdAndIsReadFalse(Long receiverId);
 }

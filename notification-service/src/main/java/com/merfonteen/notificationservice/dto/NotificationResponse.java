@@ -12,7 +12,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @Builder
 @Data
-public class NotificationDto {
+public class NotificationResponse {
     private Long id;
     private Long senderId;
     private Long receiverId;

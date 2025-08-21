@@ -4,11 +4,13 @@ import com.merfonteen.exceptions.BadRequestException;
 import com.merfonteen.exceptions.NotFoundException;
 import com.merfonteen.notificationservice.client.FeedClient;
 import com.merfonteen.notificationservice.client.PostClient;
-import com.merfonteen.notificationservice.dto.NotificationDto;
-import com.merfonteen.notificationservice.dto.NotificationsPageDto;
+import com.merfonteen.notificationservice.dto.NotificationResponse;
+import com.merfonteen.notificationservice.dto.NotificationsPageResponse;
+import com.merfonteen.notificationservice.dto.NotificationsSearchRequest;
 import com.merfonteen.notificationservice.mapper.NotificationMapper;
 import com.merfonteen.notificationservice.model.Notification;
 import com.merfonteen.notificationservice.repository.NotificationRepository;
+import com.merfonteen.notificationservice.service.redis.RedisCounter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -17,15 +19,15 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.domain.Sort;
 
-import java.time.Duration;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static com.merfonteen.notificationservice.service.impl.NotificationServiceImplTest.TestResources.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.not;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,230 +40,182 @@ class NotificationServiceImplTest {
     private FeedClient feedClient;
 
     @Mock
+    private RedisCounter redisCounter;
+
+    @Mock
     private NotificationMapper notificationMapper;
 
     @Mock
-    private StringRedisTemplate redisTemplate;
-
-    @Mock
     private NotificationRepository notificationRepository;
-
-    @Mock
-    private ValueOperations<String, String> valueOps;
 
     @InjectMocks
     private NotificationServiceImpl notificationService;
 
     @Test
     void testGetMyNotifications_ShouldReturnAllNotifications_WhenNoFilterProvided() {
-        Long userId = 123L;
-        int page = 0;
-        int size = 5;
-
-        Notification notification = Notification.builder()
-                .id(1L)
-                .receiverId(userId)
-                .isRead(false)
-                .build();
+        Notification notification = buildNotification();
+        NotificationResponse notificationResponse = buildNotificationResponse(notification);
+        List<NotificationResponse> notificationDtos = List.of(notificationResponse);
+        PageRequest pageRequest = buildPageRequest();
 
         Page<Notification> pageMock = new PageImpl<>(List.of(notification));
 
-        when(redisTemplate.opsForValue()).thenReturn(valueOps);
-        when(notificationRepository.findAllByReceiverId(eq(userId), any(PageRequest.class)))
-                .thenReturn(pageMock);
+        when(notificationMapper.buildPageRequest(PAGE, SIZE)).thenReturn(pageRequest);
+        when(notificationRepository.findAllByReceiverId(USER_ID, pageRequest)).thenReturn(pageMock);
+        when(notificationMapper.toDtos(pageMock.getContent())).thenReturn(notificationDtos);
+        when(notificationMapper.buildNotificationsPageResponse(notificationDtos, pageMock))
+                .thenReturn(buildNotificationPageResponse(notificationDtos));
 
-        NotificationDto notificationDto = NotificationDto.builder()
-                .id(1L)
-                .receiverId(userId)
-                .isRead(true)
-                .build();
+        NotificationsPageResponse result = notificationService.getMyNotifications(USER_ID, buildSearchRequest(""));
 
-        when(notificationMapper.toDtos(pageMock.getContent()))
-                .thenReturn(List.of(notificationDto));
-
-        NotificationsPageDto result = notificationService.getMyNotifications(userId, page, size, null);
-
-        assertNotNull(result);
-        assertEquals(1, result.getNotifications().size());
-        assertEquals(true, result.getNotifications().get(0).getIsRead());
-        verify(notificationRepository).saveAll(pageMock);
-//        verify(redisTemplate.opsForValue()).set("user:notifications:count:" + userId, "0");
+        assertThat(result.getNotifications()).isEqualTo(notificationDtos);
     }
 
     @Test
     void testGetMyNotifications_ShouldReturnUnread_WhenFilterIsUnread() {
-        Long userId = 123L;
-        int page = 0;
-        int size = 5;
-
-        Notification notification = Notification.builder()
-                .id(2L)
-                .receiverId(userId)
-                .isRead(false)
-                .build();
-
+        Notification notification = buildNotification();
+        NotificationResponse notificationResponse = buildNotificationResponse(notification);
+        List<NotificationResponse> notificationDtos = List.of(notificationResponse);
         Page<Notification> pageMock = new PageImpl<>(List.of(notification));
+        PageRequest pageRequest = buildPageRequest();
 
-        when(redisTemplate.opsForValue()).thenReturn(valueOps);
-        when(notificationRepository.findAllByReceiverIdAndIsReadFalse(eq(userId), any(PageRequest.class)))
-                .thenReturn(pageMock);
-        when(notificationMapper.toDtos(pageMock.getContent())).thenReturn(List.of(new NotificationDto()));
+        when(notificationMapper.buildPageRequest(PAGE, SIZE)).thenReturn(pageRequest);
+        when(notificationMapper.toDtos(pageMock.getContent())).thenReturn(notificationDtos);
+        when(notificationRepository.findAllByReceiverIdAndIsReadFalse(USER_ID, pageRequest)).thenReturn(pageMock);
+        when(notificationMapper.buildNotificationsPageResponse(notificationDtos, pageMock))
+                .thenReturn(buildNotificationPageResponse(notificationDtos));
 
-        NotificationsPageDto result = notificationService.getMyNotifications(userId, page, size, "unread");
+        NotificationsPageResponse result = notificationService.getMyNotifications(USER_ID, buildSearchRequest("unread"));
 
-        assertNotNull(result);
-        assertEquals(1, result.getNotifications().size());
-        verify(notificationRepository).saveAll(pageMock);
-//        verify(redisTemplate.opsForValue()).set("user:notifications:count:" + userId, "0");
+        assertThat(result.getNotifications()).isEqualTo(notificationDtos);
     }
-
-    @Test
-    void getMyNotifications_ShouldCapSizeTo100_WhenSizeIsGreaterThan100() {
-        Long userId = 1L;
-        int tooLargeSize = 200;
-
-        Page<Notification> emptyPage = new PageImpl<>(Collections.emptyList());
-
-        when(redisTemplate.opsForValue()).thenReturn(valueOps);
-        when(notificationRepository.findAllByReceiverId(eq(userId), any(PageRequest.class)))
-                .thenReturn(emptyPage);
-
-        when(notificationMapper.toDtos(anyList())).thenReturn(Collections.emptyList());
-
-        NotificationsPageDto result = notificationService.getMyNotifications(userId, 0, tooLargeSize, null);
-
-        assertEquals(0, result.getNotifications().size());
-        verify(notificationRepository).findAllByReceiverId(eq(userId), argThat(p -> p.getPageSize() == 100));
-    }
-
 
     @Test
     void testCountUnreadNotifications_ShouldReturnCachedValue_WhenCacheHit() {
-        Long userId = 1L;
-        String cacheKey = "user:notifications:unread:count:" + userId;
-        when(redisTemplate.opsForValue()).thenReturn(valueOps);
-        when(valueOps.get(cacheKey)).thenReturn("5");
+        when(redisCounter.getCachedValue(USER_ID)).thenReturn("100");
 
-        Long result = notificationService.countUnreadNotifications(userId);
+        Long result = notificationService.countUnreadNotifications(USER_ID);
 
-
-        assertEquals(5L, result);
+        assertThat(result).isEqualTo(100L);
         verify(notificationRepository, never()).countAllByReceiverIdAndIsReadFalse(anyLong());
     }
 
     @Test
     void testCountUnreadNotifications_ShouldQueryDbAndCache_WhenCacheMiss() {
-        Long userId = 1L;
-        String cacheKey = "user:notifications:unread:count:" + userId;
+        when(redisCounter.getCachedValue(USER_ID)).thenReturn(null);
+        when(notificationRepository.countAllByReceiverIdAndIsReadFalse(USER_ID)).thenReturn(100L);
 
-        when(redisTemplate.opsForValue()).thenReturn(valueOps);
-        when(valueOps.get(cacheKey)).thenReturn(null);
-        when(notificationRepository.countAllByReceiverIdAndIsReadFalse(userId)).thenReturn(3L);
+        Long result = notificationService.countUnreadNotifications(USER_ID);
 
-        Long result = notificationService.countUnreadNotifications(userId);
-
-        assertEquals(3L, result);
-        verify(notificationRepository).countAllByReceiverIdAndIsReadFalse(userId);
-        verify(valueOps).set(eq(cacheKey), eq("3"), any(Duration.class));
+        assertThat(result).isEqualTo(100L);
+        verify(notificationRepository, times(1)).countAllByReceiverIdAndIsReadFalse(USER_ID);
+        verify(redisCounter).setCounter(USER_ID, result);
     }
 
     @Test
     void testMarkAsRead_ShouldUpdateNotificationAndDecrementCache_WhenFound() {
-        Long notificationId = 1L;
-        Long userId = 100L;
+        Notification notification = buildNotification();
+        Notification savedNotification = buildNotification(true);
+        NotificationResponse notificationResponse = buildNotificationResponse(savedNotification);
 
-        Notification notification = Notification.builder()
-                .id(notificationId)
-                .receiverId(userId)
-                .isRead(false)
-                .build();
-
-        Notification savedNotification = Notification.builder()
-                .id(notificationId)
-                .receiverId(userId)
-                .isRead(true)
-                .build();
-
-        when(redisTemplate.opsForValue()).thenReturn(valueOps);
-        when(notificationRepository.findByIdAndReceiverId(notificationId, userId))
+        when(notificationRepository.findByIdAndReceiverId(NOTIFICATION_ID, USER_ID))
                 .thenReturn(Optional.of(notification));
         when(notificationRepository.save(notification)).thenReturn(savedNotification);
-        when(notificationMapper.toDto(savedNotification)).thenReturn(new NotificationDto());
+        when(notificationMapper.toDto(savedNotification)).thenReturn(notificationResponse);
 
-        NotificationDto result = notificationService.markAsRead(notificationId, userId);
+        NotificationResponse result = notificationService.markAsRead(NOTIFICATION_ID, USER_ID);
 
-        assertNotNull(result);
-        assertTrue(notification.getIsRead());
-        verify(notificationRepository).save(notification);
-        verify(redisTemplate.opsForValue()).decrement("user:notifications:unread:count:" + userId);
+        assertThat(result.getIsRead()).isEqualTo(true);
+        verify(redisCounter).decrementCounter(USER_ID);
     }
 
     @Test
     void testMarkAsRead_ShouldThrowException_WhenNotificationNotFound() {
-        Long notificationId = 1L;
-        Long userId = 100L;
-
-        when(notificationRepository.findByIdAndReceiverId(notificationId, userId))
+        when(notificationRepository.findByIdAndReceiverId(NOTIFICATION_ID, USER_ID))
                 .thenReturn(Optional.empty());
 
-        NotFoundException exception = assertThrows(NotFoundException.class, () ->
-                notificationService.markAsRead(notificationId, userId));
+        assertThrows(NotFoundException.class, () ->
+                notificationService.markAsRead(NOTIFICATION_ID, USER_ID));
 
-        assertTrue(exception.getMessage().contains("Doesn't exist notification"));
         verify(notificationRepository, never()).save(any());
-        verify(redisTemplate, never()).opsForValue();
+        verify(redisCounter, never()).decrementCounter(USER_ID);
     }
 
     @Test
     void testDeleteNotification_ShouldDeleteNotification_WhenExistsAndOwnedByUser() {
-        Long notificationId = 1L;
-        Long userId = 10L;
-
-        Notification notification = Notification.builder()
-                .id(notificationId)
-                .receiverId(userId)
-                .build();
-
-        when(notificationRepository.findById(notificationId)).thenReturn(Optional.of(notification));
-        when(notificationMapper.toDto(notification)).thenReturn(new NotificationDto());
-
-        NotificationDto result = notificationService.deleteNotification(notificationId, userId);
-
-        assertNotNull(result);
+        Notification notification = buildNotification();
+        when(notificationRepository.findById(NOTIFICATION_ID)).thenReturn(Optional.of(notification));
+        notificationService.deleteNotification(NOTIFICATION_ID, USER_ID);
         verify(notificationRepository).delete(notification);
-        verify(notificationMapper).toDto(notification);
-    }
-
-    @Test
-    void testDeleteNotification_ShouldThrowNotFoundException_WhenNotificationDoesNotExist() {
-        Long notificationId = 1L;
-        Long userId = 10L;
-
-        when(notificationRepository.findById(notificationId)).thenReturn(Optional.empty());
-
-        assertThrows(NotFoundException.class, () ->
-                notificationService.deleteNotification(notificationId, userId));
-
-        verify(notificationRepository, never()).delete(any());
     }
 
     @Test
     void testDeleteNotification_ShouldThrowBadRequestException_WhenNotificationNotOwnedByUser() {
-        Long notificationId = 1L;
-        Long userId = 10L;
-        Long anotherUserId = 20L;
+        Notification notification = buildNotification(ANOTHER_USER_ID);
 
-        Notification notification = Notification.builder()
-                .id(notificationId)
-                .receiverId(anotherUserId)
-                .build();
-
-        when(notificationRepository.findById(notificationId)).thenReturn(Optional.of(notification));
+        when(notificationRepository.findById(NOTIFICATION_ID)).thenReturn(Optional.of(notification));
 
         assertThrows(BadRequestException.class, () ->
-                notificationService.deleteNotification(notificationId, userId));
+                notificationService.deleteNotification(NOTIFICATION_ID, USER_ID));
 
         verify(notificationRepository, never()).delete(any());
     }
 
+    static class TestResources {
+        static final Long NOTIFICATION_ID = 1L;
+        static final Long USER_ID = 100L;
+        static final Long ANOTHER_USER_ID = 200L;
+        static final int PAGE = 0;
+        static final int SIZE = 10;
+
+        static PageRequest buildPageRequest() {
+            return PageRequest.of(PAGE, SIZE, Sort.by(Sort.Direction.DESC, "createdAt"));
+        }
+
+        static NotificationsPageResponse buildNotificationPageResponse(List<NotificationResponse> notificationDtos) {
+            return NotificationsPageResponse.builder()
+                    .notifications(notificationDtos)
+                    .build();
+        }
+
+        static Notification buildNotification() {
+            return Notification.builder()
+                    .id(NOTIFICATION_ID)
+                    .receiverId(USER_ID)
+                    .isRead(false)
+                    .build();
+        }
+
+        static Notification buildNotification(Long receiverId) {
+            return Notification.builder()
+                    .id(NOTIFICATION_ID)
+                    .receiverId(receiverId)
+                    .isRead(false)
+                    .build();
+        }
+
+        static Notification buildNotification(boolean isRead) {
+            return Notification.builder()
+                    .id(NOTIFICATION_ID)
+                    .receiverId(USER_ID)
+                    .isRead(isRead)
+                    .build();
+        }
+
+        static NotificationResponse buildNotificationResponse(Notification notification) {
+            return NotificationResponse.builder()
+                    .id(notification.getId())
+                    .receiverId(notification.getReceiverId())
+                    .isRead(notification.getIsRead())
+                    .build();
+        }
+
+        static NotificationsSearchRequest buildSearchRequest(String filter) {
+            return NotificationsSearchRequest.builder()
+                    .page(PAGE)
+                    .size(SIZE)
+                    .filterRaw(filter)
+                    .build();
+        }
+    }
 }

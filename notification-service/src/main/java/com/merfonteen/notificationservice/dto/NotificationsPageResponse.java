@@ -12,8 +12,8 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class NotificationsPageDto {
-    private List<NotificationDto> notifications;
+public class NotificationsPageResponse {
+    private List<NotificationResponse> notifications;
     @JsonProperty("current_page")
     private Integer currentPage;
     @JsonProperty("total_pages")

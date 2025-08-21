@@ -1,7 +1,8 @@
 package com.merfonteen.notificationservice.controller;
 
-import com.merfonteen.notificationservice.dto.NotificationDto;
-import com.merfonteen.notificationservice.dto.NotificationsPageDto;
+import com.merfonteen.notificationservice.dto.NotificationResponse;
+import com.merfonteen.notificationservice.dto.NotificationsPageResponse;
+import com.merfonteen.notificationservice.dto.NotificationsSearchRequest;
 import com.merfonteen.notificationservice.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -15,11 +16,9 @@ public class NotificationController {
     private final NotificationService notificationService;
 
     @GetMapping
-    public ResponseEntity<NotificationsPageDto> getMyNotifications(@RequestHeader("X-User-Id") Long currentUserId,
-                                                                   @RequestParam(defaultValue = "0") int page,
-                                                                   @RequestParam(defaultValue = "10") int size,
-                                                                   @RequestParam(defaultValue = "ALL") String filter) {
-        return ResponseEntity.ok(notificationService.getMyNotifications(currentUserId, page, size, filter));
+    public ResponseEntity<NotificationsPageResponse> getMyNotifications(@RequestHeader("X-User-Id") Long currentUserId,
+                                                                        NotificationsSearchRequest searchRequest) {
+        return ResponseEntity.ok(notificationService.getMyNotifications(currentUserId, searchRequest));
     }
 
     @GetMapping("/unread/count")
@@ -28,14 +27,15 @@ public class NotificationController {
     }
 
     @PatchMapping("/{id}/read")
-    public ResponseEntity<NotificationDto> markAsRead(@PathVariable("id") Long id,
-                                                      @RequestHeader("X-User-Id") Long currentUserId) {
+    public ResponseEntity<NotificationResponse> markAsRead(@PathVariable("id") Long id,
+                                                           @RequestHeader("X-User-Id") Long currentUserId) {
         return ResponseEntity.ok(notificationService.markAsRead(id, currentUserId));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<NotificationDto> deleteNotification(@PathVariable("id") Long id,
-                                                              @RequestHeader("X-User-Id") Long currentUserId) {
-        return ResponseEntity.ok(notificationService.deleteNotification(id, currentUserId));
+    public ResponseEntity<Void> deleteNotification(@PathVariable("id") Long id,
+                                                   @RequestHeader("X-User-Id") Long currentUserId) {
+        notificationService.deleteNotification(id, currentUserId);
+        return ResponseEntity.noContent().build();
     }
 }

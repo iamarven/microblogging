@@ -4,8 +4,9 @@ import com.merfonteen.exceptions.BadRequestException;
 import com.merfonteen.exceptions.NotFoundException;
 import com.merfonteen.notificationservice.client.FeedClient;
 import com.merfonteen.notificationservice.client.PostClient;
-import com.merfonteen.notificationservice.dto.NotificationDto;
-import com.merfonteen.notificationservice.dto.NotificationsPageDto;
+import com.merfonteen.notificationservice.dto.NotificationResponse;
+import com.merfonteen.notificationservice.dto.NotificationsPageResponse;
+import com.merfonteen.notificationservice.dto.NotificationsSearchRequest;
 import com.merfonteen.notificationservice.dto.SubscriptionDto;
 import com.merfonteen.notificationservice.mapper.NotificationMapper;
 import com.merfonteen.notificationservice.model.Notification;
@@ -13,6 +14,7 @@ import com.merfonteen.notificationservice.model.enums.NotificationFilter;
 import com.merfonteen.notificationservice.model.enums.NotificationType;
 import com.merfonteen.notificationservice.repository.NotificationRepository;
 import com.merfonteen.notificationservice.service.NotificationService;
+import com.merfonteen.notificationservice.service.redis.RedisCounter;
 import feign.FeignException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -20,34 +22,29 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
 
 @Slf4j
 @RequiredArgsConstructor
 @Service
 public class NotificationServiceImpl implements NotificationService {
-
     private final PostClient postClient;
     private final FeedClient feedClient;
+    private final RedisCounter redisCounter;
     private final NotificationMapper notificationMapper;
-    private final StringRedisTemplate stringRedisTemplate;
     private final NotificationRepository notificationRepository;
 
     @Transactional
     @Override
-    public NotificationsPageDto getMyNotifications(Long currentUserId, int page, int size, String filterRaw) {
-        if (size > 100) {
-            size = 100;
-        }
-        NotificationFilter filter = NotificationFilter.from(filterRaw);
+    public NotificationsPageResponse getMyNotifications(Long currentUserId, NotificationsSearchRequest searchRequest) {
+        NotificationFilter filter = NotificationFilter.from(searchRequest.getFilterRaw());
 
-        PageRequest request = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        PageRequest request = notificationMapper.buildPageRequest(searchRequest.getPage(), searchRequest.getSize());
         Page<Notification> userNotifications;
 
         switch (filter) {
@@ -59,99 +56,89 @@ public class NotificationServiceImpl implements NotificationService {
                     notificationRepository.findAllByReceiverId(currentUserId, request);
         }
 
-        List<NotificationDto> notificationDtos = notificationMapper.toDtos(userNotifications.getContent());
+        List<NotificationResponse> notificationResponses = notificationMapper.toDtos(userNotifications.getContent());
         log.info("User '{}' fetched {} notifications (page={}, size={})",
-                currentUserId, userNotifications.getNumberOfElements(), page, size);
+                currentUserId, notificationResponses.size(),
+                searchRequest.getPage(), searchRequest.getSize()
+        );
 
-        for (Notification notification : userNotifications) {
-            notification.setIsRead(true);
+        if (filter.equals(NotificationFilter.UNREAD) || filter.equals(NotificationFilter.ALL)) {
+            for (Notification notification : userNotifications) {
+                notification.setIsRead(true);
+            }
+            redisCounter.refreshCountUnreadNotifications(currentUserId);
         }
 
         notificationRepository.saveAll(userNotifications);
-        stringRedisTemplate.opsForValue().set("user:notifications:unread:count:" + currentUserId, "0");
 
-        return NotificationsPageDto.builder()
-                .notifications(notificationDtos)
-                .currentPage(userNotifications.getNumber())
-                .totalPages(userNotifications.getTotalPages())
-                .totalElements(userNotifications.getTotalElements())
-                .isLastPage(userNotifications.isLast())
-                .build();
+        return notificationMapper.buildNotificationsPageResponse(notificationResponses, userNotifications);
     }
 
     @Override
     public Long countUnreadNotifications(Long currentUserId) {
-        String cacheKey = "user:notifications:unread:count:" + currentUserId;
-        String cacheValue = stringRedisTemplate.opsForValue().get(cacheKey);
+        String cacheValue = redisCounter.getCachedValue(currentUserId);
 
         if (cacheValue != null) {
             return Long.parseLong(cacheValue);
         }
 
         Long countFromDb = notificationRepository.countAllByReceiverIdAndIsReadFalse(currentUserId);
-        stringRedisTemplate.opsForValue().set(cacheKey, String.valueOf(countFromDb), Duration.ofMinutes(10));
+        redisCounter.setCounter(currentUserId, countFromDb);
 
         return countFromDb;
     }
 
     @Transactional
     @Override
-    public NotificationDto markAsRead(Long notificationId, Long currentUserId) {
-        Optional<Notification> notification = notificationRepository.findByIdAndReceiverId(notificationId, currentUserId);
+    public NotificationResponse markAsRead(Long notificationId, Long currentUserId) {
+        Notification notification = getNotificationByIdAndReceiverId(notificationId, currentUserId);
+        notification.setIsRead(true);
+        Notification saved = notificationRepository.save(notification);
 
-        if(notification.isEmpty()) {
-            log.warn("User '{}' tried to mark as read non-existing notification '{}'", currentUserId, notificationId);
-            throw new NotFoundException(
-                    String.format("Doesn't exist notification with id '%d' and user id '%d'",
-                            notificationId, currentUserId));
-        }
-
-        notification.get().setIsRead(true);
-        Notification saved = notificationRepository.save(notification.get());
-        stringRedisTemplate.opsForValue().decrement("user:notifications:unread:count:" + currentUserId);
+        redisCounter.decrementCounter(currentUserId);
 
         return notificationMapper.toDto(saved);
     }
 
     @Transactional
     @Override
-    public NotificationDto deleteNotification(Long id, Long currentUserId) {
-        Optional<Notification> notificationToDelete = notificationRepository.findById(id);
-        if(notificationToDelete.isPresent()) {
-            if(!Objects.equals(notificationToDelete.get().getReceiverId(), currentUserId)) {
-                throw new BadRequestException("You cannot delete not your own notifications");
-            }
-        } else {
-            throw new NotFoundException(String.format("Notification with id '%d' not found", id));
+    public void deleteNotification(Long id, Long currentUserId) {
+        Notification notificationToDelete = notificationRepository.findById(id).orElse(null);
+
+        if (notificationToDelete == null) {
+            return;
         }
-        notificationRepository.delete(notificationToDelete.get());
+
+        if (!Objects.equals(notificationToDelete.getReceiverId(), currentUserId)) {
+            throw new BadRequestException("You cannot delete not your own notifications");
+        }
+
+        notificationRepository.delete(notificationToDelete);
         log.info("Deleted a notification '{}' by user '{}'", id, currentUserId);
-        return notificationMapper.toDto(notificationToDelete.get());
+
+        redisCounter.decrementCounter(currentUserId);
     }
 
     @Transactional
     @Override
     public void deleteNotificationsForEntity(Long entityId, NotificationType type) {
         log.info("Deleting all notifications for entity with id '{}' and type: {}", entityId, type);
-        notificationRepository.deleteByEntityIdAndType(entityId, type);
+        List<Notification> notificationsToDelete = notificationRepository.findByEntityIdAndType(entityId, type);
+        if (notificationsToDelete.isEmpty()) {
+            return;
+        }
+        notificationRepository.deleteAll(notificationsToDelete);
     }
 
     @Transactional
     @Override
     public void sendLikeNotification(Long senderId, Long likeId, Long postId) {
         Long postAuthorId = postClient.getPostAuthorId(postId);
+        Notification notification = notificationMapper.buildNotification(
+                senderId, postAuthorId, likeId, NotificationType.LIKE);
 
-        Notification notification = Notification.builder()
-                .senderId(senderId)
-                .receiverId(postAuthorId)
-                .entityId(postId)
-                .type(NotificationType.LIKE)
-                .message(String.format("User with id '%d' has liked your post with id '%d'", senderId, postId))
-                .isRead(false)
-                .createdAt(Instant.now())
-                .build();
+        redisCounter.incrementCounter(postAuthorId);
 
-        stringRedisTemplate.opsForValue().increment("user:notifications:unread:count:" + postAuthorId);
         notificationRepository.save(notification);
     }
 
@@ -163,18 +150,12 @@ public class NotificationServiceImpl implements NotificationService {
 
         if (!userSubscribers.isEmpty()) {
             for (SubscriptionDto subscription : userSubscribers) {
-                Notification notification = Notification.builder()
-                        .senderId(authorId)
-                        .receiverId(subscription.getFollowerId())
-                        .entityId(postId)
-                        .type(NotificationType.POST)
-                        .message(String.format("User with id '%d' has published a new post with id '%d'", authorId, postId))
-                        .isRead(false)
-                        .createdAt(Instant.now())
-                        .build();
+
+                Notification notification = notificationMapper.buildNotification(
+                        authorId, subscription.getFollowerId(), postId, NotificationType.POST);
 
                 buffer.add(notification);
-                stringRedisTemplate.opsForValue().increment("user:notifications:unread:count:" + subscription.getFollowerId());
+                redisCounter.incrementCounter(subscription.getFollowerId());
 
                 if (buffer.size() == 50) {
                     notificationRepository.saveAll(buffer);
@@ -191,17 +172,10 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     @Override
     public void sendFollowNotification(Long followerId, Long followeeId, Long subscriptionId) {
-        Notification notification = Notification.builder()
-                .senderId(followerId)
-                .receiverId(followeeId)
-                .entityId(subscriptionId)
-                .type(NotificationType.SUBSCRIPTION)
-                .message(String.format("User with id '%d' has just subscribed to user with id '%d'", followerId, followeeId))
-                .isRead(false)
-                .createdAt(Instant.now())
-                .build();
+        Notification notification = notificationMapper.buildNotification(
+                followerId, followeeId, subscriptionId, NotificationType.SUBSCRIPTION);
 
-        stringRedisTemplate.opsForValue().increment("user:notifications:unread:count:" + followeeId);
+        redisCounter.incrementCounter(followeeId);
         notificationRepository.save(notification);
     }
 
@@ -209,20 +183,17 @@ public class NotificationServiceImpl implements NotificationService {
     public void sendCommentNotification(Long commentId, Long postId, Long leftCommentUserId) {
         Long postAuthorId = postClient.getPostAuthorId(postId);
 
-        Notification notification = Notification.builder()
-                .senderId(leftCommentUserId)
-                .receiverId(postAuthorId)
-                .entityId(commentId)
-                .type(NotificationType.COMMENT)
-                .message(String.format("User with id '%d' has just left comment '%d' to post with id '%d'",
-                        leftCommentUserId, commentId, postId)
-                )
-                .isRead(false)
-                .createdAt(Instant.now())
-                .build();
+        Notification notification = notificationMapper.buildNotification(
+                leftCommentUserId, postAuthorId, commentId, NotificationType.COMMENT);
 
-        stringRedisTemplate.opsForValue().increment("user:notifications:unread:count:" + postAuthorId);
+        redisCounter.incrementCounter(postAuthorId);
         notificationRepository.save(notification);
+    }
+
+    private Notification getNotificationByIdAndReceiverId(Long id, Long currentUserId) {
+        return notificationRepository.findByIdAndReceiverId(id, currentUserId)
+                .orElseThrow(() -> new NotFoundException(
+                        String.format("Notification with id '%d' and receiverId '%d 'not found", id, currentUserId)));
     }
 
     private void safeSaveNotifications(List<Notification> notificationsToSave) {
@@ -237,7 +208,7 @@ public class NotificationServiceImpl implements NotificationService {
         List<SubscriptionDto> userSubscribers = Collections.emptyList();
         try {
             userSubscribers = feedClient.getUserSubscribers(authorId);
-        } catch (FeignException.NotFound e) {
+        } catch (FeignException e) {
             log.warn("Error during getting user's subscribers. Skip creating notification");
         }
         return userSubscribers;
