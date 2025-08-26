@@ -1,4 +1,4 @@
-package com.merfonteen.likeservice.util;
+package com.merfonteen.likeservice.service.impl.redis;
 
 import com.merfonteen.exceptions.TooManyRequestsException;
 import lombok.RequiredArgsConstructor;

@@ -12,8 +12,8 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class LikePageResponseDto {
-    private List<LikeDto> likes;
+public class LikePageResponse {
+    private List<LikeResponse> likes;
     @JsonProperty("current_page")
     private Integer currentPage;
     @JsonProperty("total_pages")

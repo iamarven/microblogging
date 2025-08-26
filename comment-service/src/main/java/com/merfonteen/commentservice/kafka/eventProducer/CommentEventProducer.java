@@ -23,11 +23,11 @@ public class CommentEventProducer {
 
     public void sendCommentCreatedEvent(CommentCreatedEvent event) {
         kafkaTemplate.send(commentCreatedTopic, event.getCommentId().toString(), event);
-        log.info("New message was sent to topic comment-created-event successfully: {}", event);
+        log.info("New message was sent to topic={} successfully: {}", commentCreatedTopic, event);
     }
 
     public void sendCommentRemovedEvent(CommentRemovedEvent event) {
         kafkaTemplate.send(commentRemovedTopic, event.getCommentId().toString(), event);
-        log.info("New message was sent to topic comment-removed-event successfully: {}", event);
+        log.info("New message was sent to topic={} successfully: {}", commentRemovedTopic, event);
     }
 }

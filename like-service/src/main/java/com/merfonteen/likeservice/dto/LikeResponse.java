@@ -11,8 +11,8 @@ import java.time.Instant;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class LikeDto {
-    private Long likeId;
+public class LikeResponse {
+    private Long id;
     private Long userId;
     private Long postId;
     private Instant createdAt;

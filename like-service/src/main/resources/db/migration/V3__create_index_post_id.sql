@@ -1,1 +1,0 @@
-CREATE INDEX idx_likes_post_id ON like_service.likes (post_id);

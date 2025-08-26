@@ -1,13 +1,19 @@
 package com.merfonteen.likeservice.service;
 
 import com.merfonteen.kafkaEvents.PostRemovedEvent;
-import com.merfonteen.likeservice.dto.LikeDto;
-import com.merfonteen.likeservice.dto.LikePageResponseDto;
+import com.merfonteen.likeservice.dto.LikeResponse;
+import com.merfonteen.likeservice.dto.LikePageResponse;
+import com.merfonteen.likeservice.dto.LikesSearchRequest;
 
 public interface LikeService {
-    LikePageResponseDto getLikesForPost(Long postId, int page, int size);
+
+    LikePageResponse getLikesForPost(Long postId, LikesSearchRequest searchRequest);
+
     Long getLikeCount(Long postId);
-    LikeDto likePost(Long postId, Long currentUserId);
-    LikeDto removeLike(Long postId, Long currentUserId);
+
+    LikeResponse likePost(Long postId, Long currentUserId);
+
+    LikeResponse removeLike(Long postId, Long currentUserId);
+
     void removeLikesOnPost(PostRemovedEvent event);
 }

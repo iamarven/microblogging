@@ -6,14 +6,16 @@ import com.merfonteen.kafkaEvents.LikeRemovedEvent;
 import com.merfonteen.kafkaEvents.LikeSentEvent;
 import com.merfonteen.kafkaEvents.PostRemovedEvent;
 import com.merfonteen.likeservice.client.PostClient;
-import com.merfonteen.likeservice.dto.LikeDto;
-import com.merfonteen.likeservice.dto.LikePageResponseDto;
+import com.merfonteen.likeservice.dto.LikePageResponse;
+import com.merfonteen.likeservice.dto.LikeResponse;
+import com.merfonteen.likeservice.dto.LikesSearchRequest;
 import com.merfonteen.likeservice.kafka.eventProducer.LikeEventProducer;
 import com.merfonteen.likeservice.mapper.LikeMapper;
 import com.merfonteen.likeservice.model.Like;
 import com.merfonteen.likeservice.repository.LikeRepository;
 import com.merfonteen.likeservice.service.LikeService;
-import com.merfonteen.likeservice.util.LikeRateLimiter;
+import com.merfonteen.likeservice.service.impl.redis.LikeRateLimiter;
+import com.merfonteen.likeservice.service.impl.redis.RedisCounter;
 import feign.FeignException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -21,11 +23,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -35,57 +34,45 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Service
 public class LikeServiceImpl implements LikeService {
-
     private final PostClient postClient;
     private final LikeMapper likeMapper;
+    private final RedisCounter redisCounter;
     private final LikeRepository likeRepository;
     private final LikeRateLimiter likeRateLimiter;
     private final LikeEventProducer likeEventProducer;
-    private final StringRedisTemplate stringRedisTemplate;
 
     @Override
-    public LikePageResponseDto getLikesForPost(Long postId, int page, int size) {
+    public LikePageResponse getLikesForPost(Long postId, LikesSearchRequest searchRequest) {
         checkPostExistsOrThrowException(postId);
 
-        if(size > 100) {
-            size = 100;
-        }
-
-        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        PageRequest pageRequest = likeMapper.buildPageRequest(searchRequest);
         Page<Like> likesPage = likeRepository.findAllByPostId(postId, pageRequest);
-        List<LikeDto> likesForPost = likeMapper.toDtos(likesPage.getContent());
+        List<LikeResponse> likesForPost = likeMapper.toDtos(likesPage.getContent());
 
-        return LikePageResponseDto.builder()
-                .likes(likesForPost)
-                .currentPage(likesPage.getNumber())
-                .totalPages(likesPage.getTotalPages())
-                .totalElements(likesPage.getTotalElements())
-                .isLastPage(likesPage.isLast())
-                .build();
+        return likeMapper.buildLikePageResponse(likesForPost, likesPage);
     }
 
     @Override
     public Long getLikeCount(Long postId) {
-        String key = "like:count:post:" + postId;
-        String cachedValue = stringRedisTemplate.opsForValue().get(key);
+        String cachedValue = redisCounter.getCachedValue(postId);
 
-        if(cachedValue != null) {
+        if (cachedValue != null) {
             return Long.parseLong(cachedValue);
         }
 
         long countFromDb = likeRepository.countByPostId(postId);
-        stringRedisTemplate.opsForValue().set(key, String.valueOf(countFromDb), Duration.ofMinutes(10));
+        redisCounter.setCounter(postId, countFromDb);
 
         return countFromDb;
     }
 
     @Transactional
     @Override
-    public LikeDto likePost(Long postId, Long currentUserId) {
+    public LikeResponse likePost(Long postId, Long currentUserId) {
         checkPostExistsOrThrowException(postId);
 
         Optional<Like> existing = likeRepository.findByPostIdAndUserId(postId, currentUserId);
-        if(existing.isPresent()) {
+        if (existing.isPresent()) {
             return likeMapper.toDto(existing.get());
         }
 
@@ -98,9 +85,9 @@ public class LikeServiceImpl implements LikeService {
                 .build();
 
         Like savedLike = likeRepository.save(newLike);
-        log.info("New like with id '{}' was saved to database successfully", savedLike.getId());
+        log.info("New like with id '{}' was saved successfully", savedLike.getId());
 
-        stringRedisTemplate.opsForValue().increment("like:count:post:" + postId);
+        redisCounter.incrementCounter(postId);
 
         LikeSentEvent likeSentEvent = LikeSentEvent.builder()
                 .likeId(newLike.getId())
@@ -115,23 +102,20 @@ public class LikeServiceImpl implements LikeService {
 
     @Transactional
     @Override
-    public LikeDto removeLike(Long postId, Long currentUserId) {
+    public LikeResponse removeLike(Long postId, Long currentUserId) {
         checkPostExistsOrThrowException(postId);
-
-        Optional<Like> likeToRemove = likeRepository.findByPostIdAndUserId(postId, currentUserId);
         likeRateLimiter.limitAmountOfUnlikes(currentUserId);
 
-        if(likeToRemove.isEmpty()) {
+        Optional<Like> likeToRemove = likeRepository.findByPostIdAndUserId(postId, currentUserId);
+
+        if (likeToRemove.isEmpty()) {
             throw new BadRequestException("You did not like this post");
         }
 
         likeRepository.delete(likeToRemove.get());
         log.info("Like with id '{}' was removed", likeToRemove.get().getId());
 
-        String cacheKey = "like:count:post:" + postId;
-        if(Boolean.TRUE.equals(stringRedisTemplate.hasKey(cacheKey))) {
-            stringRedisTemplate.opsForValue().decrement(cacheKey);
-        }
+        redisCounter.decrementCounter(postId);
 
         LikeRemovedEvent likeRemovedEvent = LikeRemovedEvent.builder()
                 .likeId(likeToRemove.get().getId())

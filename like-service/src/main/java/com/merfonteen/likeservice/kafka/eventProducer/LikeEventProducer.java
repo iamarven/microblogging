@@ -23,10 +23,11 @@ public class LikeEventProducer {
 
     public void sendLikeSentEvent(LikeSentEvent event) {
         kafkaTemplate.send(likeSentTopic, event.getLikeId().toString(), event);
-        log.info("New message was sent to topic 'like-sent' successfully: {}", event);
+        log.info("New message was sent to topic='{}' successfully: {}", likeSentTopic, event);
     }
 
     public void sendLikeRemovedEvent(LikeRemovedEvent event) {
         kafkaTemplate.send(likeRemovedTopic, event.getLikeId().toString(), event);
+        log.info("New message was sent to topic='{}' successfully: {}", likeRemovedTopic, event);
     }
 }
