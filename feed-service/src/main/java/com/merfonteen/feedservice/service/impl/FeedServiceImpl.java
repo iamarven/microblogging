@@ -23,6 +23,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -47,7 +48,7 @@ public class FeedServiceImpl implements FeedService {
         Page<Feed> feedsPage = feedRepository.findAllByUserId(currentUserId, pageRequest);
         List<FeedDto> feedsForUser = feedMapper.toListDtos(feedsPage.getContent());
 
-        log.info("Fetched {} feeds for userId={}", feedsForUser.size(), currentUserId);
+        log.debug("Fetched {} feeds for userId={}", feedsForUser.size(), currentUserId);
         return feedMapper.buildFeedPageResponse(feedsForUser, feedsPage);
     }
 
@@ -86,7 +87,14 @@ public class FeedServiceImpl implements FeedService {
     @Override
     public void deleteFeedsByPostId(PostRemovedEvent event) {
         int deleted = feedRepository.deleteAllByPostId(event.getPostId());
-        log.info("Deleted {} feeds by postId={}", deleted, event.getPostId());
+        log.debug("Deleted {} feeds by postId={}", deleted, event.getPostId());
+    }
+
+    @Transactional(value = Transactional.TxType.REQUIRES_NEW)
+    public int deleteFeedsBelowDate(Instant date, int batchSize) {
+        int deletedFeedsBelowDate = feedRepository.deleteFeedsBelowDate(date, batchSize);
+        log.debug("Deleted {} outdated feeds below date {}", deletedFeedsBelowDate, date);
+        return deletedFeedsBelowDate;
     }
 
     private void safeSaveFeeds(List<Feed> feedsToSave) {
