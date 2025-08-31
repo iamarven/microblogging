@@ -14,23 +14,25 @@ import java.util.Objects;
 @Entity
 @Table(name = "users", schema = "user_service")
 public class User {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 50)
+    @Column(name = "username", nullable = false, unique = true, length = 50)
     private String username;
 
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(name = "email", nullable = false, unique = true, length = 100)
     private String email;
 
-    @Column(name = "full_name", nullable = true)
+    @Column(name = "full_name")
     private String fullName;
 
-    @Column(nullable = true)
+    @Column(name = "bio")
     private String bio;
 
-    @Column(name = "profile_image_url", nullable = true)
+    @Column(name = "profile_image_url")
     private String profileImageUrl;
 
     @Column(name = "created_at", nullable = false)

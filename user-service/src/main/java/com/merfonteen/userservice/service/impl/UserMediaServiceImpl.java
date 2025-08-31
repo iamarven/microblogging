@@ -3,8 +3,6 @@ package com.merfonteen.userservice.service.impl;
 import com.merfonteen.dtos.FileUploadResponse;
 import com.merfonteen.exceptions.NotFoundException;
 import com.merfonteen.userservice.client.MediaClient;
-import com.merfonteen.userservice.dto.PublicUserDto;
-import com.merfonteen.userservice.mapper.UserMapper;
 import com.merfonteen.userservice.model.User;
 import com.merfonteen.userservice.repository.UserRepository;
 import com.merfonteen.userservice.service.UserMediaService;
@@ -21,7 +19,6 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 @Service
 public class UserMediaServiceImpl implements UserMediaService {
-
     private final MediaClient mediaClient;
     private final UserRepository userRepository;
 

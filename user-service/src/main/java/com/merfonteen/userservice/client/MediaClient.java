@@ -9,7 +9,8 @@ import org.springframework.web.multipart.MultipartFile;
 @FeignClient(
         name = "media-service",
         url = "${media-service.url}",
-        fallbackFactory = MediaClientFallBackFactory.class)
+        fallbackFactory = MediaClientFallBackFactory.class
+)
 public interface MediaClient {
 
     @PostMapping("/api/files/profile/photo")

@@ -25,7 +25,6 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Service
 public class UserServiceImpl implements UserService {
-
     private final UserMapper userMapper;
     private final UserRepository userRepository;
 
