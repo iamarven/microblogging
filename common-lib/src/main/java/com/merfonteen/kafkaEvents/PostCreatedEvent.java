@@ -14,5 +14,6 @@ import java.time.Instant;
 public class PostCreatedEvent {
     private Long postId;
     private Long authorId;
+    private String content;
     private Instant createdAt;
 }

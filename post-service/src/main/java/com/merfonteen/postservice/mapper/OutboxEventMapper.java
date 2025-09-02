@@ -45,7 +45,7 @@ public class OutboxEventMapper {
             case POST_CREATED -> {
                 try {
                     return objectMapper.writeValueAsString(
-                            new PostCreatedEvent(post.getId(), post.getAuthorId(), post.getCreatedAt()));
+                            new PostCreatedEvent(post.getId(), post.getAuthorId(), post.getContent(), post.getCreatedAt()));
                 } catch (JsonProcessingException e) {
                     throw new RuntimeException(e);
                 }

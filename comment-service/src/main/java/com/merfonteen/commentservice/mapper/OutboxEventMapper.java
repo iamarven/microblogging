@@ -45,7 +45,9 @@ public class OutboxEventMapper {
             case COMMENT_CREATED -> {
                 try {
                     return objectMapper.writeValueAsString(
-                            new CommentCreatedEvent(comment.getId(), comment.getUserId(), comment.getPostId()));
+                            new CommentCreatedEvent(
+                                    comment.getId(), comment.getUserId(), comment.getPostId(),
+                                    comment.getContent(), comment.getCreatedAt()));
                 } catch (JsonProcessingException e) {
                     throw new RuntimeException(e);
                 }

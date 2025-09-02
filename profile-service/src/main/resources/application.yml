@@ -1,0 +1,48 @@
+server:
+  port: 8087
+
+spring:
+  application:
+    name: profile-service
+  datasource:
+    url: jdbc:postgresql://profile-db:5432/profile_service_db
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_schema: profile_service
+  flyway:
+    enabled: true
+    schemas: profile_service
+  data:
+    redis:
+      host: redis
+      port: 6379
+  cache:
+    type: redis
+  kafka:
+    bootstrap-servers: kafka:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    properties:
+      spring.json.add.type.headers: false
+      spring.json.trusted.packages: "*"
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka-server:8761/eureka
+
+topic:
+  post-created: post-created-event
+  post-removed: post-removed-event
+  comment-created: comment-created-event
+  comment-removed: comment-removed-event
+
+
