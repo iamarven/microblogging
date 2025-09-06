@@ -1,9 +1,9 @@
 package com.merfonteen.userservice.service.impl;
 
+import com.merfonteen.dtos.PublicUserDto;
 import com.merfonteen.exceptions.BadRequestException;
 import com.merfonteen.exceptions.NotFoundException;
 import com.merfonteen.userservice.dto.PrivateUserDto;
-import com.merfonteen.userservice.dto.PublicUserDto;
 import com.merfonteen.userservice.dto.UserCreateDto;
 import com.merfonteen.userservice.dto.UserUpdateDto;
 import com.merfonteen.userservice.mapper.UserMapper;

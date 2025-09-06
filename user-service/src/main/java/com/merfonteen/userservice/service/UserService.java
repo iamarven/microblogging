@@ -1,7 +1,7 @@
 package com.merfonteen.userservice.service;
 
+import com.merfonteen.dtos.PublicUserDto;
 import com.merfonteen.userservice.dto.PrivateUserDto;
-import com.merfonteen.userservice.dto.PublicUserDto;
 import com.merfonteen.userservice.dto.UserCreateDto;
 import com.merfonteen.userservice.dto.UserUpdateDto;
 

@@ -18,10 +18,9 @@ public interface CommentProjectionWriter extends JpaRepository<CommentReadModel,
                     VALUES (:commentId, :postId, :authorId, :content, :createdAt, :likesCount)
                                 ON CONFLICT (comment_id) DO UPDATE
                                     SET post_id = EXCLUDED.post_id,
-                                        author_id = EXCLUDED.authorId
-                                        content = EXCLUDED.content
+                                        author_id = EXCLUDED.author_id,
+                                        content = EXCLUDED.content,
                                         created_at = EXCLUDED.created_at
-                                        likes_count = EXCLUDED.likes_count
             """, nativeQuery = true)
     int upsertComment(@Param("commentId") Long commentId,
                       @Param("postId") Long postId,

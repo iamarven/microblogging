@@ -45,4 +45,7 @@ topic:
   comment-created: comment-created-event
   comment-removed: comment-removed-event
 
+url:
+  user-service: http://user-service:8080
+
 

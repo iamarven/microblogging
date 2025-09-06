@@ -20,8 +20,6 @@ public interface PostProjectionWriter extends JpaRepository<PostReadModel, Long>
                               SET author_id = EXCLUDED.author_id,
                                   created_at = EXCLUDED.created_at,
                                   content = EXCLUDED.content,
-                                  likes_count   = EXCLUDED.likes_count,
-                                  comments_count= EXCLUDED.comments_count    
             """, nativeQuery = true)
     int upsertPost(@Param("postId") Long postId,
                    @Param("authorId") Long authorId,
@@ -30,5 +28,11 @@ public interface PostProjectionWriter extends JpaRepository<PostReadModel, Long>
                    @Param("likesCount") long likesCount,
                    @Param("commentsCount") long commentsCount);
 
-
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = """
+            UPDATE profile_service.post_read_model
+                        SET comments_count = comments_count + :delta
+                        WHERE post_id = :postId
+            """, nativeQuery = true)
+    void incrementPostComments(@Param("postId") Long postId, @Param("delta") Long delta);
 }

@@ -1,6 +1,6 @@
 package com.merfonteen.userservice.mapper;
 
-import com.merfonteen.userservice.dto.PublicUserDto;
+import com.merfonteen.dtos.PublicUserDto;
 import com.merfonteen.userservice.dto.PrivateUserDto;
 import com.merfonteen.userservice.model.User;
 import org.mapstruct.Mapper;

@@ -21,7 +21,6 @@ public class KafkaConfig {
     @Value("${spring.kafka.bootstrap-servers}")
     private String bootstrapServers;
 
-
     @Bean
     public ConsumerFactory<String, Object> consumerFactory() {
         Map<String, Object> config = new HashMap<>();
@@ -34,7 +33,6 @@ public class KafkaConfig {
         config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         return new DefaultKafkaConsumerFactory<>(config);
     }
-
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, Object> kafkaListenerContainerFactory() {

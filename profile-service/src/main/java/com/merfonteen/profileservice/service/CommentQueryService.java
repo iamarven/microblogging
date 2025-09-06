@@ -1,0 +1,64 @@
+package com.merfonteen.profileservice.service;
+
+import com.merfonteen.profileservice.dto.CommentItemDto;
+import com.merfonteen.profileservice.dto.CommentPageDto;
+import com.merfonteen.profileservice.dto.CommentsSearchRequest;
+import com.merfonteen.profileservice.mapper.CommentMapper;
+import com.merfonteen.profileservice.model.CommentReadModel;
+import com.merfonteen.profileservice.model.cursors.CommentCursor;
+import com.merfonteen.profileservice.repository.CommentReadModelRepository;
+import com.merfonteen.profileservice.util.CursorCodec;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+
+@Slf4j
+@RequiredArgsConstructor
+@Service
+public class CommentQueryService {
+    private final CursorCodec cursorCodec;
+    private final CommentMapper commentMapper;
+    private final CommentReadModelRepository commentReadModelRepository;
+
+    public CommentPageDto getComments(Long postId, CommentsSearchRequest request) {
+        log.debug("Getting comments on post='{}', limit='{}'", postId, request.getLimit());
+        Pageable page = Pageable.ofSize(Math.min(Math.max(request.getLimit(), 1), 100));
+        List<CommentReadModel> comments;
+
+        Optional<CommentCursor> currentCursor = cursorCodec.decodeCommentCursor(request.getCursor());
+        if (request.getCursor().isEmpty()) {
+            comments = commentReadModelRepository.findLatestByPostId(postId, page);
+        } else {
+            comments = commentReadModelRepository.findByPostIdAfterCursor(
+                    postId,
+                    currentCursor.get().createdAt(),
+                    currentCursor.get().id(),
+                    page
+            );
+        }
+
+        List<CommentItemDto> items = comments.stream()
+                .map(commentMapper::toDto)
+                .toList();
+
+        String nextCursor = comments.size() == page.getPageSize() ?
+                cursorCodec.encodeCommentCursor(comments.getLast().getCreatedAt(),
+                                                comments.getLast().getPostId())
+                : null;
+
+        return new CommentPageDto(items, nextCursor);
+    }
+
+    public List<CommentItemDto> getLatestCommentsOnPostWithLimit(Long postId, int limit) {
+        log.debug("Getting comments for post='{}'", postId);
+        Pageable pageable = Pageable.ofSize(Math.min(Math.max(limit, 1), 100));
+        List<CommentReadModel> comments = commentReadModelRepository.findLatestByPostId(postId, pageable);
+        return comments.stream()
+                .map(commentMapper::toDto)
+                .toList();
+    }
+}
