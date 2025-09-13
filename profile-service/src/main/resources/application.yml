@@ -48,4 +48,72 @@ topic:
 url:
   user-service: http://user-service:8080
 
+resilience4j:
+  circuitbreaker:
+    instances:
+      user-service:
+        registerHealthIndicator: true
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+        slowCallRateThreshold: 50
+        slowCallDurationThreshold: 2s
+        eventConsumerBufferSize: 50
+        writableStackTraceEnabled: false
+        recordExceptions:
+          - org.springframework.web.client.HttpServerErrorException
+          - org.springframework.web.reactive.function.client.WebClientRequestException
+            - java.net.SocketTimeoutException
+            - java.net.ConnectException
+            - java.util.concurrent.TimeoutException
+            - java.io.IOException
+        ignoreExceptions:
+          - com.merfonteen.exceptions
+          - org.springframework.web.client.HttpClientErrorException
+
+  retry:
+    instances:
+      user-service:
+        maxAttempts: 3
+        waitDuration: 200ms
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+        randomizedWaitFactor: 0.5
+        retryExceptions:
+          - org.springframework.web.client.HttpServerErrorException
+          - org.springframework.web.reactive.function.client.WebClientRequestException
+          - java.net.SocketTimeoutException
+          - java.net.ConnectException
+          - java.util.concurrent.TimeoutException
+          - java.io.IOException
+        ignoreExceptions:
+          - com.merfonteen.exceptions
+          - org.springframework.web.client.HttpClientErrorException
+
+  ratelimiter:
+    instances:
+      some-service:
+        limitForPeriod: 100
+        limitRefreshPeriod: 1s
+        timeoutDuration: 0
+        registerHealthIndicator: true
+        eventConsumerBufferSize: 100
+
+  bulkhead:
+    instances:
+      some-service:
+        maxConcurrentCalls: 25
+        maxWaitDuration: 0
+
+  timelimiter:
+    instances:
+      some-service:
+        timeoutDuration: 3s
+        cancelRunningFuture: true
+
+
 

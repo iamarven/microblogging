@@ -47,18 +47,13 @@ public class CommentQueryService {
 
         String nextCursor = comments.size() == page.getPageSize() ?
                 cursorCodec.encodeCommentCursor(comments.getLast().getCreatedAt(),
-                                                comments.getLast().getPostId())
+                                                comments.getLast().getCommentId())
                 : null;
 
         return new CommentPageDto(items, nextCursor);
     }
 
-    public List<CommentItemDto> getLatestCommentsOnPostWithLimit(Long postId, int limit) {
-        log.debug("Getting comments for post='{}'", postId);
-        Pageable pageable = Pageable.ofSize(Math.min(Math.max(limit, 1), 100));
-        List<CommentReadModel> comments = commentReadModelRepository.findLatestByPostId(postId, pageable);
-        return comments.stream()
-                .map(commentMapper::toDto)
-                .toList();
+    public List<CommentReadModel> findTopNByPostIds(long[] postIds, int topN) {
+        return commentReadModelRepository.findTopNByPostIds(postIds, topN);
     }
 }

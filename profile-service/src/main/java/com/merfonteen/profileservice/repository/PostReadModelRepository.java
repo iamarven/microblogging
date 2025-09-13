@@ -21,7 +21,7 @@ public interface PostReadModelRepository extends JpaRepository<PostReadModel, Lo
     @Query("""
             SELECT p FROM PostReadModel p 
             WHERE p.authorId = :authorId
-            ORDER BY p.createdAt DESC, p.postId
+            ORDER BY p.createdAt DESC, p.postId DESC
             """)
     List<PostReadModel> findLatestByAuthorId(@Param("authorId") Long authorId, Pageable pageable);
 
@@ -29,7 +29,7 @@ public interface PostReadModelRepository extends JpaRepository<PostReadModel, Lo
             SELECT p FROM PostReadModel p 
             WHERE p.authorId = :authorId AND 
                         (p.createdAt < :createdAt OR (p.createdAt = :createdAt AND p.postId < :postId))
-            ORDER BY p.createdAt DESC, p.postId
+            ORDER BY p.createdAt DESC, p.postId DESC
             """)
     List<PostReadModel> findByAuthorIdAfterCursor(@Param("authorId") Long authorId,
                                                   @Param("createdAt") Instant createdAt,

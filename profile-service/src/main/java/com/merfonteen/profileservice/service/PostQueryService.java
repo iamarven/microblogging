@@ -1,9 +1,12 @@
 package com.merfonteen.profileservice.service;
 
+import com.merfonteen.profileservice.dto.CommentItemDto;
 import com.merfonteen.profileservice.dto.PostItemDto;
 import com.merfonteen.profileservice.dto.PostPageDto;
 import com.merfonteen.profileservice.dto.PostsSearchRequest;
+import com.merfonteen.profileservice.mapper.CommentMapper;
 import com.merfonteen.profileservice.mapper.PostMapper;
+import com.merfonteen.profileservice.model.CommentReadModel;
 import com.merfonteen.profileservice.model.PostReadModel;
 import com.merfonteen.profileservice.model.cursors.PostCursor;
 import com.merfonteen.profileservice.repository.PostReadModelRepository;
@@ -14,7 +17,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -24,6 +29,7 @@ public class PostQueryService {
     private final CursorCodec cursorCodec;
     private final CommentQueryService commentQueryService;
     private final PostReadModelRepository postReadModelRepository;
+    private final CommentMapper commentMapper;
 
     public PostPageDto getUserPosts(Long userId, PostsSearchRequest request) {
         log.debug("Getting user posts for id='{}', limit='{}'", userId, request.getLimit());
@@ -45,16 +51,23 @@ public class PostQueryService {
                 .map(postMapper::toDto)
                 .toList();
 
-        if (request.isIncludeComments()) {
+        if (request.isIncludeComments() && !items.isEmpty()) {
+            long[] ids = items.stream().mapToLong(PostItemDto::getPostId).toArray();
+            List<CommentReadModel> topNByPostIds = commentQueryService.findTopNByPostIds(ids, 10);
+
+            Map<Long, List<CommentItemDto>> postIdToComments = topNByPostIds.stream()
+                    .collect(Collectors.groupingBy(
+                            CommentReadModel::getPostId,
+                            Collectors.mapping(commentMapper::toDto, Collectors.toList())));
+
             items.forEach(item -> {
-                var latestComments = commentQueryService.getLatestCommentsOnPostWithLimit(item.getPostId(), 10);
-                item.getComments().addAll(latestComments);
+                item.getComments().addAll(postIdToComments.getOrDefault(item.getPostId(), List.of()));
             });
         }
 
         String nextCursor = posts.size() == page.getPageSize() ?
                 cursorCodec.encodePostCursor(posts.getLast().getCreatedAt(),
-                                             posts.getLast().getPostId())
+                        posts.getLast().getPostId())
                 : null;
 
         return new PostPageDto(items, nextCursor);

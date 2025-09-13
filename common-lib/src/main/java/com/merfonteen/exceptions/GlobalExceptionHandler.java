@@ -32,6 +32,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return new ErrorResponse(HttpStatus.TOO_MANY_REQUESTS.value(), ex.getMessage(), Instant.now());
     }
 
+    @ExceptionHandler(ServiceUnavailableException.class)
+    @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+    public ErrorResponse handleServiceUnavailableException(ServiceUnavailableException ex) {
+        return new ErrorResponse(HttpStatus.SERVICE_UNAVAILABLE.value(), ex.getMessage(), Instant.now());
+    }
+
     @ExceptionHandler(FileStorageException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse handleFileStorageException(FileStorageException ex) {

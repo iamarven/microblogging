@@ -21,18 +21,31 @@ public interface CommentReadModelRepository extends JpaRepository<CommentReadMod
     @Query("""
             SELECT c FROM CommentReadModel c
             WHERE c.postId = :postId
-            ORDER BY c.createdAt DESC
+            ORDER BY c.createdAt DESC, c.commentId DESC
             """
     )
     List<CommentReadModel> findLatestByPostId(@Param("postId") Long postId, Pageable pageable);
 
     @Query("""
             SELECT c FROM CommentReadModel c
-            WHERE c.postId = :postId AND (c.createdAt < :createdAt OR (c.createdAt = :created AND c.postId < :postId))
+            WHERE c.postId = :postId AND 
+                        (c.createdAt < :createdAt OR (c.createdAt = :createdAt AND c.commentId < :commentId))
+                                    ORDER BY c.createdAt DESC, c.commentId DESC
             """)
     List<CommentReadModel> findByPostIdAfterCursor(@Param("postId") Long postId,
                                                    @Param("createdAt") Instant createdAt,
                                                    @Param("commentId") Long commentId,
                                                    Pageable pageable);
 
+    @Query(value = """
+            SELECT * FROM (
+                            SELECT c.*, ROW_NUMBER() OVER (PARTITION BY c.post_id ORDER BY c.created_at DESC, c.comment_id DESC)
+                            as rank
+                            FROM profile_service.comment_read_model c
+                            WHERE c.post_id = ANY(:postIds)
+                        ) t
+                        WHERE t.rank <= :topN
+            """, nativeQuery = true)
+    List<CommentReadModel> findTopNByPostIds(@Param("postIds") long[] postIds,
+                                             @Param("topN") int topN);
 }

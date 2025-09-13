@@ -20,5 +20,7 @@ CREATE TABLE profile_service.comment_read_model
     likes_count BIGINT      NOT NULL DEFAULT 0
 );
 
-CREATE INDEX IF NOT EXISTS idx_prm_author_created_at ON profile_service.post_read_model(author_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_crm_post_created ON profile_service.comment_read_model (post_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_prm_author_created_at
+    ON profile_service.post_read_model(author_id, created_at DESC, post_id DESC);
+CREATE INDEX IF NOT EXISTS idx_crm_post_created
+    ON profile_service.comment_read_model (post_id, created_at DESC, comment_id DESC);

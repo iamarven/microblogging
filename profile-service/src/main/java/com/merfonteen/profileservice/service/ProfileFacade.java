@@ -6,6 +6,7 @@ import com.merfonteen.profileservice.dto.AggregatedProfileDto;
 import com.merfonteen.profileservice.dto.PostPageDto;
 import com.merfonteen.profileservice.dto.PostsSearchRequest;
 import com.merfonteen.profileservice.dto.ProfileSearchRequest;
+import com.merfonteen.profileservice.util.Resilience;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,8 @@ import org.springframework.stereotype.Service;
 public class ProfileFacade {
     private final UserClient userClient;
     private final PostQueryService postQueryService;
+    private final Resilience resilience;
+    private final CacheService cacheService;
 
     public AggregatedProfileDto getAggregatedProfile(Long userId, ProfileSearchRequest searchRequest) {
         PublicUserDto user = null;
@@ -23,7 +26,7 @@ public class ProfileFacade {
 
         if (searchRequest.isIncludeBasic()) {
             try {
-                user = userClient.getUser(userId); //add more logic - resilence and maybe asynchronous
+                user = resilience.userCall(() -> cacheService.getOrLoad(userId, () -> userClient.getUser(userId)));
             } catch (Exception e) {
                 partial = true;
                 log.error("Error while fetching basic user info, userId='{}', ex='{}'", userId, e.getMessage());
