@@ -1,5 +1,6 @@
 package com.merfonteen.profileservice.service;
 
+import com.merfonteen.profileservice.config.RedisConfig;
 import com.merfonteen.profileservice.dto.CommentItemDto;
 import com.merfonteen.profileservice.dto.PostItemDto;
 import com.merfonteen.profileservice.dto.PostPageDto;
@@ -13,6 +14,7 @@ import com.merfonteen.profileservice.repository.PostReadModelRepository;
 import com.merfonteen.profileservice.util.CursorCodec;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +22,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import static com.merfonteen.profileservice.config.RedisConfig.USER_POSTS_CACHE;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -31,6 +35,7 @@ public class PostQueryService {
     private final PostReadModelRepository postReadModelRepository;
     private final CommentMapper commentMapper;
 
+    @Cacheable(value = USER_POSTS_CACHE, key = "#userId + ':' + #request.limit + ':' + #request.cursor")
     public PostPageDto getUserPosts(Long userId, PostsSearchRequest request) {
         log.debug("Getting user posts for id='{}', limit='{}'", userId, request.getLimit());
         Pageable page = Pageable.ofSize(Math.min(Math.max(request.getLimit(), 1), 100));

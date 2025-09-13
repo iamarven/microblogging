@@ -16,9 +16,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class ProfileFacade {
     private final UserClient userClient;
-    private final PostQueryService postQueryService;
     private final Resilience resilience;
     private final CacheService cacheService;
+    private final PostQueryService postQueryService;
 
     public AggregatedProfileDto getAggregatedProfile(Long userId, ProfileSearchRequest searchRequest) {
         PublicUserDto user = null;
