@@ -10,6 +10,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.io.Serializable;
 import java.time.Instant;
 
 @Setter
@@ -19,7 +20,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @Entity
 @Table(name = "comment_read_model", schema = "profile_service")
-public class CommentReadModel {
+public class CommentReadModel implements Serializable {
 
     @Id
     @Column(name = "comment_id", nullable = false)

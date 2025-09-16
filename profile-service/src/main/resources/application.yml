@@ -34,10 +34,10 @@ spring:
       spring.json.add.type.headers: false
       spring.json.trusted.packages: "*"
 
-eureka:
-  client:
-    service-url:
-      defaultZone: http://eureka-server:8761/eureka
+#eureka:
+#  client:
+#    service-url:
+#      defaultZone: http://eureka-server:8761/eureka
 
 topic:
   post-created: post-created-event
@@ -67,12 +67,18 @@ resilience4j:
         recordExceptions:
           - org.springframework.web.client.HttpServerErrorException
           - org.springframework.web.reactive.function.client.WebClientRequestException
-            - java.net.SocketTimeoutException
-            - java.net.ConnectException
-            - java.util.concurrent.TimeoutException
-            - java.io.IOException
+          - java.net.SocketTimeoutException
+          - java.net.ConnectException
+          - java.util.concurrent.TimeoutException
+          - java.io.IOException
         ignoreExceptions:
-          - com.merfonteen.exceptions
+          - com.merfonteen.exceptions.BadRequestException
+          - com.merfonteen.exceptions.FileStorageException
+          - com.merfonteen.exceptions.ForbiddenException
+          - com.merfonteen.exceptions.InvalidFileException
+          - com.merfonteen.exceptions.NotFoundException
+          - com.merfonteen.exceptions.ServiceUnavailableException
+          - com.merfonteen.exceptions.TooManyRequestsException
           - org.springframework.web.client.HttpClientErrorException
 
   retry:
@@ -91,7 +97,13 @@ resilience4j:
           - java.util.concurrent.TimeoutException
           - java.io.IOException
         ignoreExceptions:
-          - com.merfonteen.exceptions
+          - com.merfonteen.exceptions.BadRequestException
+          - com.merfonteen.exceptions.FileStorageException
+          - com.merfonteen.exceptions.ForbiddenException
+          - com.merfonteen.exceptions.InvalidFileException
+          - com.merfonteen.exceptions.NotFoundException
+          - com.merfonteen.exceptions.ServiceUnavailableException
+          - com.merfonteen.exceptions.TooManyRequestsException
           - org.springframework.web.client.HttpClientErrorException
 
   ratelimiter:

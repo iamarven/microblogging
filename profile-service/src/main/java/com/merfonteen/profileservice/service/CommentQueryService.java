@@ -58,6 +58,7 @@ public class CommentQueryService {
         return new CommentPageDto(items, nextCursor);
     }
 
+    @Cacheable(value = POST_COMMENTS_CACHE, key = "#postIds + ':' + #topN")
     public List<CommentReadModel> findTopNByPostIds(long[] postIds, int topN) {
         return commentReadModelRepository.findTopNByPostIds(postIds, topN);
     }

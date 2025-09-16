@@ -22,8 +22,8 @@ import java.time.Duration;
 @EnableCaching
 @Configuration
 public class RedisConfig {
-    public static final String USER_POSTS_CACHE = "userPosts";
-    public static final String POST_COMMENTS_CACHE = "postComments";
+    public static final String USER_POSTS_CACHE = "user-posts";
+    public static final String POST_COMMENTS_CACHE = "post-comments";
 
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
