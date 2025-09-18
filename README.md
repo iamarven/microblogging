@@ -48,16 +48,16 @@ Responsible for user registration and storage.
 
 ---
 
-**Profile Service**  
+**Profile Service:**  
 Service aggregator. Designed in order to show aggregated user profiles.  
 
 **Features:**  
-  - Aggregates data from User Service, Post Service, and Comment Service.  
-  - Uses CQRS projections in order to collect required information quickly.  
-  - Contains two tables: post-read-model and comment-read-model that are filled via Kafka events.  
-  - Redis caching for database performance and cache invalidating by events.  
-  - Resilience4j for external calls to User Service.  
-  - Even if User Service goes wrong, the user profile always will be open  
+  - Aggregates data from User Service, Post Service, and Comment Service.
+  - Uses CQRS projections in order to collect required information quickly.
+  - Contains two tables: post-read-model and comment-read-model that are filled via Kafka events.
+  - Redis caching for database performance and cache invalidating by events.
+  - Resilience4j for external calls to User Service.
+  - Even if User Service goes wrong, the user profile always will be open
     (posts and comments are available and general user info can be received from cache - partial response)
 
     <img width="953" height="748" alt="user-profile feature" src="https://github.com/user-attachments/assets/61197223-9d4d-4215-889d-680f49a0f4b5" />
