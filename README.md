@@ -2,7 +2,7 @@
 
 A microservices application. A mini-social network with basic functionality: creating posts, subscribing to users, likes/coments, creating a personal news feed.
 
-<img width="1713" height="1667" alt="schema" src="https://github.com/user-attachments/assets/d4b2230d-f24c-4c2c-83e7-c3d7c4ac0f72" />
+<img width="1483" height="1118" alt="arch" src="https://github.com/user-attachments/assets/6dad1057-eb8e-42df-b62c-76054666d692" />
 
 ## Tech stack
 
@@ -41,9 +41,26 @@ Eureka server for service registration.
 Responsible for user registration and storage.
 
   **Features:**  
+  - Gives general user info
   - Feign client for cross-service communication.
   - No authorization(X-User-Id is used).
   - Docker containerization.
+
+---
+
+**Profile Service:**  
+Service aggregator. Designed in order to show aggregated user profiles.  
+
+**Features:**  
+  - Aggregates data from User Service, Post Service, and Comment Service.
+  - Uses CQRS projections in order to collect required information quickly.
+  - Contains two tables: post-read-model and comment-read-model that are filled via Kafka events.
+  - Redis caching for database performance and cache invalidating by events.
+  - Resilience4j for external calls to User Service.
+  - Even if User Service goes wrong, the user profile always will be open
+    (posts and comments are available and general user info can be received from cache - partial response)
+
+    <img width="953" height="748" alt="user-profile feature" src="https://github.com/user-attachments/assets/61197223-9d4d-4215-889d-680f49a0f4b5" />
 
 ---
  
