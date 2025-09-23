@@ -18,6 +18,6 @@ public interface MediaClient {
                                           @RequestHeader("X-User-Id") Long userId);
 
     @DeleteMapping("/api/files/{fileType}/{fileName}")
-    void deleteUserMediaFile(@PathVariable String fileType,
-                             @PathVariable String fileName);
+    void deleteUserMediaFile(@PathVariable("fileType") String fileType,
+                             @PathVariable("fileName") String fileName);
 }

@@ -12,10 +12,13 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 @Component
 public class PostEventListener {
-
     private final LikeService likeService;
 
-    @KafkaListener(topics = "${topic.post-removed}", groupId = "like-group")
+    @KafkaListener(
+            topics = "${topic.post-removed}",
+            groupId = "like-group",
+            containerFactory = "postRemovedContainerFactory"
+    )
     public void deleteLikesOnPost(PostRemovedEvent event, Acknowledgment ack) {
         log.info("Received post-removed-event: {}", event);
         likeService.removeLikesOnPost(event);

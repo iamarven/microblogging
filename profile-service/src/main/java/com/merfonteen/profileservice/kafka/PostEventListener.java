@@ -19,7 +19,11 @@ public class PostEventListener {
     private final CacheService cacheService;
     private final PostProjectionService postProjectionService;
 
-    @KafkaListener(topics = "${topic.post-created}", groupId = "profile-group")
+    @KafkaListener(
+            topics = "${topic.post-created}",
+            groupId = "profile-group",
+            containerFactory = "postCreatedContainerFactory"
+    )
     public void handlePostCreatedEvent(PostCreatedEvent event, Acknowledgment ack) {
         log.info("Profile service received a post-created-event '{}'", event);
         postProjectionService.applyPostCreated(event);
@@ -27,7 +31,11 @@ public class PostEventListener {
         cacheService.invalidateCacheByEntityId(USER_POSTS_CACHE, event.getAuthorId());
     }
 
-    @KafkaListener(topics = "${topic.post-removed}", groupId = "profile-group")
+    @KafkaListener(
+            topics = "${topic.post-removed}",
+            groupId = "profile-group",
+            containerFactory = "postRemovedContainerFactory"
+    )
     public void handlePostRemovedEvent(PostRemovedEvent event, Acknowledgment ack) {
         log.info("Profile service received a post-removed-event '{}'", event);
         postProjectionService.applyPostRemoved(event);

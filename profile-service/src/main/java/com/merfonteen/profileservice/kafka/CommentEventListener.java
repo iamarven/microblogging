@@ -20,7 +20,11 @@ public class CommentEventListener {
     private final CacheService cacheService;
     private final CommentProjectionService commentProjectionService;
 
-    @KafkaListener(topics = "${topic.comment-created}", groupId = "profile-group")
+    @KafkaListener(
+            topics = "${topic.comment-created}",
+            groupId = "profile-group",
+            containerFactory = "commentCreatedContainerFactory"
+    )
     public void handleCommentCreatedEvent(CommentCreatedEvent event, Acknowledgment ack) {
         log.info("Profile service received a comment-created-event '{}'", event);
         commentProjectionService.applyCommentCreated(event);
@@ -29,7 +33,11 @@ public class CommentEventListener {
         cacheService.invalidateCacheByEntityId(USER_POSTS_CACHE, event.getPostId());
     }
 
-    @KafkaListener(topics = "${topic.comment-removed}", groupId = "profile-group")
+    @KafkaListener(
+            topics = "${topic.comment-removed}",
+            groupId = "profile-group",
+            containerFactory = "commentRemovedContainerFactory"
+    )
     public void handleCommentRemovedEvent(CommentRemovedEvent event, Acknowledgment ack) {
         log.info("Profile service received a comment-removed-event '{}'", event);
         commentProjectionService.applyCommentRemoved(event);

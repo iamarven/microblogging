@@ -17,14 +17,22 @@ public class CommentEventListener {
 
     private final NotificationService notificationService;
 
-    @KafkaListener(topics = "${topic.comment-created}", groupId = "notification-group")
+    @KafkaListener(
+            topics = "${topic.comment-created}",
+            groupId = "notification-group",
+            containerFactory = "commentCreatedContainerFactory"
+    )
     public void handleCommentCreatedEvent(CommentCreatedEvent event, Acknowledgment ack) {
         log.info("Received comment-created-event: {}", event);
         notificationService.sendCommentNotification(event.getCommentId(), event.getPostId(), event.getUserId());
         ack.acknowledge();
     }
 
-    @KafkaListener(topics = "${topic.comment-removed}")
+    @KafkaListener(
+            topics = "${topic.comment-removed}",
+            groupId = "notification-group",
+            containerFactory = "commentRemovedContainerFactory"
+    )
     public void handleCommentRemovedEvent(CommentRemovedEvent event, Acknowledgment ack) {
         log.info("Received comment-removed-event: {}", event);
         notificationService.deleteNotificationsForEntity(event.getCommentId(), NotificationType.COMMENT);

@@ -1,30 +1,19 @@
-package com.merfonteen.commentservice.config;
+package com.merfonteen.likeservice.config;
 
 import com.merfonteen.configs.CommonKafkaConsumerConfigUtil;
 import com.merfonteen.kafkaEvents.PostCreatedEvent;
 import com.merfonteen.kafkaEvents.PostRemovedEvent;
 import lombok.RequiredArgsConstructor;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.serialization.StringDeserializer;
-import org.apache.kafka.common.serialization.StringSerializer;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.*;
 import org.springframework.kafka.listener.ContainerProperties;
-import org.springframework.kafka.support.serializer.ErrorHandlingDeserializer;
-import org.springframework.kafka.support.serializer.JsonDeserializer;
-import org.springframework.kafka.support.serializer.JsonSerializer;
-
-import java.util.HashMap;
-import java.util.Map;
 
 @RequiredArgsConstructor
 @Configuration
-public class KafkaConfig {
+public class KafkaConsumerConfig {
     private final KafkaProperties kafkaProperties;
 
     private CommonKafkaConsumerConfigUtil getConfigUtil() {
@@ -40,7 +29,7 @@ public class KafkaConfig {
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, PostCreatedEvent> postCreatedContainerFactory() {
-        return getConfigUtil().containerFactory(PostCreatedEvent.class, ContainerProperties.AckMode.MANUAL_IMMEDIATE, 3);
+        return getConfigUtil().containerFactory(PostCreatedEvent.class, ContainerProperties.AckMode.MANUAL, 3);
     }
 
     // ---------- post-removed-event ----------
@@ -52,6 +41,6 @@ public class KafkaConfig {
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, PostRemovedEvent> postRemovedContainerFactory() {
-        return getConfigUtil().containerFactory(PostRemovedEvent.class, ContainerProperties.AckMode.MANUAL_IMMEDIATE, 3);
+        return getConfigUtil().containerFactory(PostRemovedEvent.class, ContainerProperties.AckMode.MANUAL, 3);
     }
 }

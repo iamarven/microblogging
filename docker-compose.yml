@@ -5,7 +5,6 @@ services:
       context: ./user-service
       dockerfile: Dockerfile
     container_name: user-service
-    restart: always
     ports:
       - "8080:8080"
     environment:
@@ -33,12 +32,47 @@ services:
     networks:
       - app-net
 
+  profile-service:
+    build:
+      context: ./profile-service
+      dockerfile: Dockerfile
+    container_name: profile-service
+    ports:
+      - "8087:8087"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://profile-db:5432/profile_service_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      - eureka-server
+      - profile-db
+      - redis
+      - kafka
+    networks:
+      - app-net
+
+  profile-db:
+    image: postgres:15-alpine
+    container_name: profile-db
+    environment:
+      POSTGRES_DB: profile_service_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5440:5432"
+    volumes:
+      - profile-db-data:/var/lib/postgresql/data
+    networks:
+      - app-net
+
   post-service:
     build:
       context: ./post-service
       dockerfile: Dockerfile
     container_name: post-service
-    restart: always
     ports:
       - "8081:8081"
     environment:
@@ -46,7 +80,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://post-db:5432/post_service_db
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
-      SPRING_REDIS_HOST: post-redis
+      SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
@@ -76,7 +110,6 @@ services:
       context: ./feed-service
       dockerfile: Dockerfile
     container_name: feed-service
-    restart: always
     ports:
       - "8082:8082"
     environment:
@@ -114,7 +147,6 @@ services:
       context: ./like-service
       dockerfile: Dockerfile
     container_name: like-service
-    restart: always
     ports:
       - "8083:8083"
     environment:
@@ -152,12 +184,11 @@ services:
       context: ./comment-service
       dockerfile: Dockerfile
     container_name: comment-service
-    restart: always
     ports:
       - "8085:8085"
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      SPRING_DATASOURCE_URL: jdbc:postgresql://like-db:5432/comment_service_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://comment-db:5432/comment_service_db
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
       SPRING_REDIS_HOST: redis
@@ -165,7 +196,7 @@ services:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     depends_on:
       - eureka-server
-      - like-db
+      - comment-db
       - redis
       - kafka
     networks:
@@ -181,7 +212,7 @@ services:
     ports:
       - "5438:5432"
     volumes:
-      - like-db-data:/var/lib/postgresql/data
+      - comment-db-data:/var/lib/postgresql/data
     networks:
       - app-net
 
@@ -190,7 +221,6 @@ services:
       context: ./notification-service
       dockerfile: Dockerfile
     container_name: notification-service
-    restart: always
     ports:
       - "8084:8084"
     environment:
@@ -225,7 +255,6 @@ services:
       context: ./media-service
       dockerfile: Dockerfile
     container_name: media-service
-    restart: always
     ports:
       - "8086:8086"
     environment:
@@ -247,7 +276,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5438:5432"
+      - "5439:5432"
     volumes:
       - media-db-data:/var/lib/postgresql/data
     networks:
@@ -323,6 +352,7 @@ volumes:
   notification-db-data:
   comment-db-data:
   media-db-data:
+  profile-db-data:
 
 networks:
   app-net:

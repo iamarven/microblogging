@@ -15,6 +15,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -37,6 +39,7 @@ public class OutboxService {
     }
 
     public void process(Page<OutboxEvent> outboxEvents) {
+        List<Long> idsToMark = new ArrayList<>();
         for (OutboxEvent event : outboxEvents) {
             try {
                 switch (event.getEventType()) {
@@ -49,15 +52,16 @@ public class OutboxService {
                         continue;
                     }
                 }
-                event.setSent(true);
+                idsToMark.add(event.getId());
             } catch (Exception e) {
                 log.error("Failed to send Kafka event for outboxEventId={}: {}", event.getId(), e.getMessage());
             }
         }
 
-        outboxEventRepository.saveAll(
-                outboxEvents.stream().filter(OutboxEvent::isSent).toList()
-        );
+        if (!idsToMark.isEmpty()) {
+            outboxEventRepository.markAsSent(idsToMark);
+            log.info("Marked as sent {} events", idsToMark.size());
+        }
     }
 
     @Transactional

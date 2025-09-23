@@ -48,7 +48,7 @@ public class FeedServiceImpl implements FeedService {
         Page<Feed> feedsPage = feedRepository.findAllByUserId(currentUserId, pageRequest);
         List<FeedDto> feedsForUser = feedMapper.toListDtos(feedsPage.getContent());
 
-        log.debug("Fetched {} feeds for userId={}", feedsForUser.size(), currentUserId);
+        log.info("Fetched {} feeds for userId={}", feedsForUser.size(), currentUserId);
         return feedMapper.buildFeedPageResponse(feedsForUser, feedsPage);
     }
 

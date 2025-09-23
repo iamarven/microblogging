@@ -17,14 +17,22 @@ public class LikeEventListener {
 
     private final NotificationService notificationService;
 
-    @KafkaListener(topics = "${topic.like-sent}", groupId = "notification-group")
+    @KafkaListener(
+            topics = "${topic.like-sent}",
+            groupId = "notification-group",
+            containerFactory = "likeSentContainerFactory"
+    )
     public void handleLikeSentEvent(LikeSentEvent event, Acknowledgment ack) {
         log.info("Received like-sent-event: {}", event);
         notificationService.sendLikeNotification(event.getUserId(), event.getLikeId(), event.getPostId());
         ack.acknowledge();
     }
 
-    @KafkaListener(topics = "${topic.like-removed}", groupId = "notification-group")
+    @KafkaListener(
+            topics = "${topic.like-removed}",
+            groupId = "notification-group",
+            containerFactory = "likeRemovedContainerFactory"
+    )
     public void handleLikeRemovedEvent(LikeRemovedEvent event, Acknowledgment ack) {
         log.info("Received like-removed-event: {}", event);
         notificationService.deleteNotificationsForEntity(event.getLikeId(), NotificationType.LIKE);

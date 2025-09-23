@@ -15,7 +15,11 @@ public class PostEventListener {
 
     private final CommentService commentService;
 
-    @KafkaListener(topics = "${topic.post-removed}", groupId = "comment-group")
+    @KafkaListener(
+            topics = "${topic.post-removed}",
+            groupId = "comment-group",
+            containerFactory = "postRemovedContainerFactory"
+    )
     public void handlePostRemovedEvent(PostRemovedEvent event, Acknowledgment ack) {
         log.info("Received post-removed-event: {}", event);
         commentService.removeCommentsOnPost(event);

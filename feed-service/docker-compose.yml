@@ -27,7 +27,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5433:5432"
+      - "54331:5432"
     volumes:
       - feed-db-data:/var/lib/postgresql/data
 
@@ -35,7 +35,7 @@ services:
     image: redis:7.2.4
     container_name: feed-service-redis
     ports:
-      - "6379:6379"
+      - "63795:6379"
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.4.0
@@ -50,7 +50,7 @@ services:
     depends_on:
       - zookeeper
     ports:
-      - "9092:9092"
+      - "9097:9092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181

@@ -16,7 +16,19 @@ CREATE TABLE comment_service.comments
             ON DELETE CASCADE
 );
 
+CREATE TABLE comment_service.outbox_events
+(
+    id             BIGSERIAL PRIMARY KEY,
+    aggregate_type VARCHAR   NOT NULL,
+    aggregate_id   BIGINT    NOT NULL,
+    event_type     VARCHAR   NOT NULL,
+    payload        JSONB     NOT NULL,
+    sent           BOOLEAN   NOT NULL DEFAULT FALSE,
+    created_at     TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
 CREATE INDEX idx_comments_post_id ON comment_service.comments (post_id);
 CREATE INDEX idx_comments_user_id ON comment_service.comments (user_id);
 CREATE INDEX idx_comments_parent_id ON comment_service.comments (parent_id);
 CREATE INDEX idx_comments_created_at ON comment_service.comments (created_at);
+CREATE INDEX idx_outbox_events_sent_false ON comment_service.outbox_events (sent) WHERE sent = FALSE;

@@ -17,14 +17,22 @@ public class SubscriptionEventListener {
 
     private final NotificationService notificationService;
 
-    @KafkaListener(topics = "${topic.subscription-created}", groupId = "notification-group")
+    @KafkaListener(
+            topics = "${topic.subscription-created}",
+            groupId = "notification-group",
+            containerFactory = "subscriptionCreatedContainerFactory"
+    )
     public void handleSubscriptionCreatedEvent(SubscriptionCreatedEvent event, Acknowledgment ack) {
         log.info("Received subscription-created-event: {}", event);
         notificationService.sendFollowNotification(event.getFollowerId(), event.getFolloweeId(), event.getSubscriptionId());
         ack.acknowledge();
     }
 
-    @KafkaListener(topics = "${topic.subscription-removed}", groupId = "notification-group")
+    @KafkaListener(
+            topics = "${topic.subscription-removed}",
+            groupId = "notification-group",
+            containerFactory = "subscriptionRemovedContainerFactory"
+    )
     public void handleSubscriptionRemovedEvent(SubscriptionRemovedEvent event, Acknowledgment ack) {
         log.info("Received subscription-removed-event: {}", event);
         notificationService.deleteNotificationsForEntity(event.getTargetUserId(), NotificationType.SUBSCRIPTION);

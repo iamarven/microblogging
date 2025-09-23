@@ -26,7 +26,6 @@ import java.net.URI;
 @RequestMapping("/api/users")
 @RestController
 public class UserController {
-
     private final UserService userService;
     private final UserMediaService userMediaService;
 
@@ -76,7 +75,7 @@ public class UserController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<PublicUserDto> deleteUser(@PathVariable("id") Long id,
-                                              @RequestHeader("X-User-Id") Long currentUserId) {
+                                                    @RequestHeader("X-User-Id") Long currentUserId) {
 
         return ResponseEntity.ok(userService.deleteUser(id, currentUserId));
     }

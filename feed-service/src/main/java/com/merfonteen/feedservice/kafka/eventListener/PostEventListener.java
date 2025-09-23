@@ -15,14 +15,22 @@ import org.springframework.stereotype.Component;
 public class PostEventListener {
     private final FeedService feedService;
 
-    @KafkaListener(topics = "${topic.post-created}", groupId = "feed-group")
+    @KafkaListener(
+            topics = "${topic.post-created}",
+            groupId = "feed-group",
+            containerFactory = "postCreatedContainerFactory"
+    )
     public void handlePostCreated(PostCreatedEvent event, Acknowledgment ack) {
         log.info("Received post-created-event: {}", event);
         feedService.distributePostToSubscribers(event);
         ack.acknowledge();
     }
 
-    @KafkaListener(topics = "${topic.post-removed}", groupId = "feed-group")
+    @KafkaListener(
+            topics = "${topic.post-removed}",
+            groupId = "feed-group",
+            containerFactory = "postRemovedContainerFactory"
+    )
     public void handlePostRemoved(PostRemovedEvent event, Acknowledgment ack) {
         log.info("Received post-removed-event: {}", event);
         feedService.deleteFeedsByPostId(event);
