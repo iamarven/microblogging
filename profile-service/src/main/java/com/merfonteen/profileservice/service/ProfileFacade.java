@@ -17,7 +17,6 @@ import org.springframework.stereotype.Service;
 public class ProfileFacade {
     private final UserClient userClient;
     private final Resilience resilience;
-    private final CacheService cacheService;
     private final PostQueryService postQueryService;
 
     public AggregatedProfileDto getAggregatedProfile(Long userId, ProfileSearchRequest searchRequest) {
@@ -26,7 +25,7 @@ public class ProfileFacade {
 
         if (searchRequest.isIncludeBasic()) {
             try {
-                user = resilience.userCall(() -> cacheService.getOrLoad(userId, () -> userClient.getUser(userId)));
+                user = resilience.userCall(() -> userClient.getUser(userId));
             } catch (Exception e) {
                 partial = true;
                 log.error("Error while fetching basic user info, userId='{}', ex='{}'", userId, e.getMessage());
@@ -36,7 +35,7 @@ public class ProfileFacade {
         PostPageDto userPostsWithComments = postQueryService.getUserPosts(userId, new PostsSearchRequest(
                 searchRequest.getPostsLimit(), true, searchRequest.getPostsCursor())
         );
-        log.info("Received '{}' posts for user='{}, partial='{}'", userPostsWithComments.posts().size(), userId, partial);
+        log.info("Received '{}' posts for user='{}, partial='{}'", userPostsWithComments.getPosts().size(), userId, partial);
 
         return new AggregatedProfileDto(user, userPostsWithComments, partial);
     }

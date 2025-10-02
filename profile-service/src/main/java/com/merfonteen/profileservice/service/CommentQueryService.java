@@ -1,6 +1,5 @@
 package com.merfonteen.profileservice.service;
 
-import com.merfonteen.profileservice.config.RedisConfig;
 import com.merfonteen.profileservice.dto.CommentItemDto;
 import com.merfonteen.profileservice.dto.CommentPageDto;
 import com.merfonteen.profileservice.dto.CommentsSearchRequest;

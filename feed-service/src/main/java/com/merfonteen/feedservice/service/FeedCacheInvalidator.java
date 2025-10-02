@@ -22,7 +22,7 @@ public class FeedCacheInvalidator {
             Set<String> keys = new HashSet<>();
             try (Cursor<String> scan = redisTemplate.scan(ScanOptions.scanOptions()
                     .match(pattern)
-                    .count(100)
+                    .count(500)
                     .build())) {
                 scan.forEachRemaining(keys::add);
             } catch (Exception e) {
@@ -33,5 +33,9 @@ public class FeedCacheInvalidator {
                 log.info("Evicted {} cached pages for user '{}'", keys.size(), userId);
             }
         }
+    }
+
+    public void evictFeedCache(Long userId) {
+
     }
 }

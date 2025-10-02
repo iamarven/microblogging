@@ -2,7 +2,7 @@ package com.merfonteen.profileservice.kafka;
 
 import com.merfonteen.kafkaEvents.PostCreatedEvent;
 import com.merfonteen.kafkaEvents.PostRemovedEvent;
-import com.merfonteen.profileservice.service.CacheService;
+import com.merfonteen.profileservice.service.CacheInvalidator;
 import com.merfonteen.profileservice.service.PostProjectionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +16,7 @@ import static com.merfonteen.profileservice.config.RedisConfig.USER_POSTS_CACHE;
 @RequiredArgsConstructor
 @Component
 public class PostEventListener {
-    private final CacheService cacheService;
+    private final CacheInvalidator cacheInvalidator;
     private final PostProjectionService postProjectionService;
 
     @KafkaListener(
@@ -28,7 +28,7 @@ public class PostEventListener {
         log.info("Profile service received a post-created-event '{}'", event);
         postProjectionService.applyPostCreated(event);
         ack.acknowledge();
-        cacheService.invalidateCacheByEntityId(USER_POSTS_CACHE, event.getAuthorId());
+        cacheInvalidator.invalidateCacheByEntityId(USER_POSTS_CACHE, event.getAuthorId());
     }
 
     @KafkaListener(
@@ -40,6 +40,6 @@ public class PostEventListener {
         log.info("Profile service received a post-removed-event '{}'", event);
         postProjectionService.applyPostRemoved(event);
         ack.acknowledge();
-        cacheService.invalidateCacheByEntityId(USER_POSTS_CACHE, event.getAuthorId());
+        cacheInvalidator.invalidateCacheByEntityId(USER_POSTS_CACHE, event.getAuthorId());
     }
 }

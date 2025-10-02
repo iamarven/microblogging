@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -87,13 +88,14 @@ public class FeedServiceImpl implements FeedService {
     @Override
     public void deleteFeedsByPostId(PostRemovedEvent event) {
         int deleted = feedRepository.deleteAllByPostId(event.getPostId());
-        log.debug("Deleted {} feeds by postId={}", deleted, event.getPostId());
+        feedCacheInvalidator.evictFeedCache(Set.of(event.getAuthorId()));
+        log.info("Deleted {} feeds by postId={}", deleted, event.getPostId());
     }
 
     @Transactional(value = Transactional.TxType.REQUIRES_NEW)
     public int deleteFeedsBelowDate(Instant date, int batchSize) {
         int deletedFeedsBelowDate = feedRepository.deleteFeedsBelowDate(date, batchSize);
-        log.debug("Deleted {} outdated feeds below date {}", deletedFeedsBelowDate, date);
+        log.info("Deleted {} outdated feeds below date {}", deletedFeedsBelowDate, date);
         return deletedFeedsBelowDate;
     }
 

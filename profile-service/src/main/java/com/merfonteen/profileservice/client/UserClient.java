@@ -5,8 +5,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import java.time.Duration;
-
 @RequiredArgsConstructor
 @Component
 public class UserClient {
@@ -17,6 +15,6 @@ public class UserClient {
                 .uri("/api/users/{id}", userId)
                 .retrieve()
                 .bodyToMono(PublicUserDto.class)
-                .block(Duration.ofMillis(300));
+                .block();
     }
 }

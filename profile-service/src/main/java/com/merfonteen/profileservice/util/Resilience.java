@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.function.Supplier;
 
 @Slf4j
@@ -24,23 +25,21 @@ public class Resilience {
     private final CircuitBreakerRegistry cbRegistry;
     private final BulkheadRegistry bulkheadRegistry;
     private final TimeLimiterRegistry timeLimiterRegistry;
-    private final RateLimiterRegistry rateLimiterRegistry;
+    private final ExecutorService executor;
 
     public <T> T userCall(Supplier<T> supplier) {
         var cb = cbRegistry.circuitBreaker("userClient");
         var retry = retryRegistry.retry("userClient");
         var tl = timeLimiterRegistry.timeLimiter("userClient");
-        var rt = rateLimiterRegistry.rateLimiter("userClient");
         var bh = bulkheadRegistry.bulkhead("userClient");
 
         Supplier<T> decorated = Decorators.ofSupplier(supplier)
                 .withCircuitBreaker(cb)
                 .withRetry(retry)
-                .withRateLimiter(rt)
                 .withBulkhead(bh)
                 .decorate();
 
-        Supplier<CompletableFuture<T>> futureSupplier = () -> CompletableFuture.supplyAsync(decorated);
+        Supplier<CompletableFuture<T>> futureSupplier = () -> CompletableFuture.supplyAsync(decorated, executor);
         Callable<T> restrictedCall = TimeLimiter.decorateFutureSupplier(tl, futureSupplier);
 
         try {

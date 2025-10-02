@@ -19,7 +19,7 @@ public interface PostProjectionWriter extends JpaRepository<PostReadModel, Long>
                          ON CONFLICT (post_id) DO UPDATE 
                               SET author_id = EXCLUDED.author_id,
                                   created_at = EXCLUDED.created_at,
-                                  content = EXCLUDED.content,
+                                  content = EXCLUDED.content
             """, nativeQuery = true)
     int upsertPost(@Param("postId") Long postId,
                    @Param("authorId") Long authorId,

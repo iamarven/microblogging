@@ -107,7 +107,7 @@ resilience4j:
 
   ratelimiter:
     instances:
-      some-service:
+      user-service:
         limitForPeriod: 100
         limitRefreshPeriod: 1s
         timeoutDuration: 0
@@ -116,13 +116,13 @@ resilience4j:
 
   bulkhead:
     instances:
-      some-service:
+      user-service:
         maxConcurrentCalls: 25
         maxWaitDuration: 0
 
   timelimiter:
     instances:
-      some-service:
+      user-service:
         timeoutDuration: 3s
         cancelRunningFuture: true
 
