@@ -1,6 +1,6 @@
 package com.merfonteen.userservice.util;
 
-import com.merfonteen.dtos.FileUploadResponse;
+import com.merfonteen.userservice.model.FileUploadResponse;
 import com.merfonteen.exceptions.FileStorageException;
 import com.merfonteen.userservice.client.MediaClient;
 import lombok.extern.slf4j.Slf4j;

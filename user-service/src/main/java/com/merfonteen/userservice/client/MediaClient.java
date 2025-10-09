@@ -1,6 +1,6 @@
 package com.merfonteen.userservice.client;
 
-import com.merfonteen.dtos.FileUploadResponse;
+import com.merfonteen.userservice.model.FileUploadResponse;
 import com.merfonteen.userservice.util.MediaClientFallBackFactory;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;

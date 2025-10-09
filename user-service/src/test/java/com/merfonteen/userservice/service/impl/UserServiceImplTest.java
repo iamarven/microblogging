@@ -1,13 +1,13 @@
 package com.merfonteen.userservice.service.impl;
 
-import com.merfonteen.dtos.PublicUserDto;
 import com.merfonteen.exceptions.BadRequestException;
 import com.merfonteen.exceptions.ForbiddenException;
 import com.merfonteen.exceptions.NotFoundException;
-import com.merfonteen.userservice.dto.UserCreateDto;
-import com.merfonteen.userservice.dto.UserUpdateDto;
 import com.merfonteen.userservice.mapper.UserMapper;
+import com.merfonteen.userservice.model.PublicUserDto;
 import com.merfonteen.userservice.model.User;
+import com.merfonteen.userservice.model.UserCreateDto;
+import com.merfonteen.userservice.model.UserUpdateDto;
 import com.merfonteen.userservice.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

@@ -1,6 +1,6 @@
 package com.merfonteen.userservice.service.impl;
 
-import com.merfonteen.dtos.FileUploadResponse;
+import com.merfonteen.userservice.model.FileUploadResponse;
 import com.merfonteen.exceptions.NotFoundException;
 import com.merfonteen.userservice.client.MediaClient;
 import com.merfonteen.userservice.model.User;

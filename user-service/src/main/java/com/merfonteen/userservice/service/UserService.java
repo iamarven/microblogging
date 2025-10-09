@@ -1,9 +1,9 @@
 package com.merfonteen.userservice.service;
 
-import com.merfonteen.dtos.PublicUserDto;
-import com.merfonteen.userservice.dto.PrivateUserDto;
-import com.merfonteen.userservice.dto.UserCreateDto;
-import com.merfonteen.userservice.dto.UserUpdateDto;
+import com.merfonteen.userservice.model.PrivateUserDto;
+import com.merfonteen.userservice.model.PublicUserDto;
+import com.merfonteen.userservice.model.UserCreateDto;
+import com.merfonteen.userservice.model.UserUpdateDto;
 
 public interface UserService {
 
