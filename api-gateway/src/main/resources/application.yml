@@ -8,10 +8,29 @@ spring:
     gateway:
       discovery:
         locator:
-          enabled: true
-          lower-case-service-id: true
+          # Отключаем авто-генерацию дефолтных маршрутов,
+          # так как мы полностью описали их в Java DSL
+          enabled: false
+
+springdoc:
+  swagger-ui:
+    urls:
+      - name: User Service
+        url: /v3/api-docs/users
+      - name: Post Service
+        url: /v3/api-docs/posts
+      - name: Feed Service
+        url: /v3/api-docs/feed
+      - name: Like Service
+        url: /v3/api-docs/likes
+      - name: Notification Service
+        url: /v3/api-docs/notifications
+      - name: Comment Service
+        url: /v3/api-docs/comments
+      - name: Media Service
+        url: /v3/api-docs/media
 
 eureka:
   client:
     service-url:
-      defaultZone: http://eureka-server:8761/eureka
+      defaultZone: http://eureka-server:8761/eureka/
